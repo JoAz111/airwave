@@ -9,6 +9,16 @@ import SwiftUI
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var model: AppModel
     private let artwork = ArtworkLoader()
+    @MainActor private static let menuBarIcon: NSImage = {
+        if let image = NSImage(named: "MenuBarIcon") {
+            image.isTemplate = true
+            return image
+        }
+        return NSImage(
+            systemSymbolName: "antenna.radiowaves.left.and.right",
+            accessibilityDescription: "Airwave"
+        )!
+    }()
 
     init() {
         let directory = RadioBrowserClient()
@@ -26,6 +36,12 @@ import SwiftUI
         WindowGroup("Airwave", id: "main") { MainWindowView(model: model, artwork: artwork).frame(idealWidth: 370, idealHeight: 560) }
             .defaultSize(width: 370, height: 560)
             .commands { CommandGroup(replacing: .newItem) {} }
-        MenuBarExtra("Airwave", systemImage: "antenna.radiowaves.left.and.right") { MenuBarPlayerView(model: model, artwork: artwork) }.menuBarExtraStyle(.window)
+        MenuBarExtra {
+            MenuBarPlayerView(model: model, artwork: artwork)
+        } label: {
+            Image(nsImage: Self.menuBarIcon)
+                .accessibilityLabel("Airwave")
+        }
+        .menuBarExtraStyle(.window)
     }
 }

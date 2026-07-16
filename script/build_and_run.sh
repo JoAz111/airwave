@@ -20,6 +20,15 @@ rm -rf "$APP_BUNDLE"
 mkdir -p "$APP_CONTENTS/MacOS" "$APP_CONTENTS/Resources"
 cp "$BUILD_BINARY" "$APP_BINARY"
 cp "$ROOT_DIR/Packaging/Info.plist" "$APP_CONTENTS/Info.plist"
+DEVELOPER_DIR="$DEVELOPER_DIR" xcrun actool "$ROOT_DIR/Packaging/Assets.xcassets" \
+  --compile "$APP_CONTENTS/Resources" \
+  --platform macosx \
+  --minimum-deployment-target 26.0 \
+  --app-icon AppIcon \
+  --output-partial-info-plist "$ROOT_DIR/.build/Airwave-Assets.plist" \
+  --warnings \
+  --notices
+cp "$ROOT_DIR/Packaging/MenuBarIcon.png" "$APP_CONTENTS/Resources/MenuBarIcon.png"
 chmod +x "$APP_BINARY"
 codesign --force --sign - --entitlements "$ROOT_DIR/Packaging/Airwave.entitlements" "$APP_BUNDLE"
 
