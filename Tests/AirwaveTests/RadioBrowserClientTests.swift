@@ -43,6 +43,46 @@ struct RadioBrowserClientTests {
         #expect(await recorder.requests.map(\.url?.host) == ["de1.api.radio-browser.info", "nl1.api.radio-browser.info"])
     }
 
+    @Test
+    func decodesCountryCodesWithStringOrIntegerCounts() async throws {
+        let recorder = RequestRecorder(responses: [.success(Self.countryCodesJSON)])
+        let client = RadioBrowserClient(
+            mirrors: [URL(string: "https://de1.api.radio-browser.info")!],
+            load: { try await recorder.load($0) }
+        )
+
+        let entries = try await client.countryCodes()
+
+        #expect(entries == [
+            CountryDirectoryEntry(code: "IL", stationCount: 4),
+            CountryDirectoryEntry(code: "FR", stationCount: 6)
+        ])
+        let request = try #require(await recorder.requests.first)
+        #expect(request.url?.path == "/json/countrycodes")
+    }
+
+    @Test
+    func stationQueryIncludesCountryCode() async throws {
+        let recorder = RequestRecorder(responses: [.success(Self.stationJSON)])
+        let client = RadioBrowserClient(
+            mirrors: [URL(string: "https://de1.api.radio-browser.info")!],
+            load: { try await recorder.load($0) }
+        )
+
+        _ = try await client.stations(matching: RadioBrowserQuery(
+            field: .name,
+            value: "jazz",
+            countryCode: "IL",
+            limit: 30,
+            order: "votes",
+            reverse: true
+        ))
+
+        let request = try #require(await recorder.requests.first)
+        let components = try #require(URLComponents(url: request.url!, resolvingAgainstBaseURL: false))
+        #expect(components.queryItems?.contains(URLQueryItem(name: "countrycode", value: "IL")) == true)
+    }
+
     private static let stationJSON = Data(#"""
     [{
       "stationuuid":"110e57c5-0601-11e8-ae97-52543be04c81",
@@ -58,7 +98,14 @@ struct RadioBrowserClientTests {
       "hls":0,
       "votes":42,
       "lastcheckok":1
-    }]
+    }] 
+    """#.utf8)
+
+    private static let countryCodesJSON = Data(#"""
+    [
+      {"name":"IL","stationcount":"4"},
+      {"name":"FR","stationcount":6}
+    ]
     """#.utf8)
 }
 

@@ -11,13 +11,31 @@ struct RadioBrowserQuery: Equatable, Sendable {
 
     let field: Field?
     let value: String
+    let countryCode: String?
     let limit: Int
     let order: String
     let reverse: Bool
+
+    init(
+        field: Field?,
+        value: String,
+        countryCode: String? = nil,
+        limit: Int,
+        order: String,
+        reverse: Bool
+    ) {
+        self.field = field
+        self.value = value
+        self.countryCode = countryCode
+        self.limit = limit
+        self.order = order
+        self.reverse = reverse
+    }
 }
 
 protocol RadioBrowserServing: Sendable {
     func stations(matching query: RadioBrowserQuery) async throws -> [Station]
+    func countryCodes() async throws -> [CountryDirectoryEntry]
     func recordClick(stationID: UUID) async
 }
 
@@ -60,6 +78,42 @@ actor RadioBrowserClient: RadioBrowserServing {
         throw lastError ?? DirectoryError.noMirrors
     }
 
+    func countryCodes() async throws -> [CountryDirectoryEntry] {
+        var lastError: Error?
+
+        for mirror in mirrors.prefix(2) {
+            do {
+                var components = URLComponents(
+                    url: mirror.appending(path: "/json/countrycodes"),
+                    resolvingAgainstBaseURL: false
+                )!
+                components.queryItems = [
+                    URLQueryItem(name: "hidebroken", value: "true"),
+                    URLQueryItem(name: "order", value: "name"),
+                    URLQueryItem(name: "limit", value: "300")
+                ]
+                guard let url = components.url else {
+                    throw DirectoryError.invalidRequest
+                }
+                var request = URLRequest(url: url)
+                request.timeoutInterval = 12
+                request.setValue(Self.userAgent, forHTTPHeaderField: "User-Agent")
+                let (data, response) = try await load(request)
+                guard (200 ... 299).contains(response.statusCode) else {
+                    throw DirectoryError.server(response.statusCode)
+                }
+                return try JSONDecoder()
+                    .decode([CountryCodeRecord].self, from: data)
+                    .map(\.entry)
+            } catch {
+                lastError = error
+                logger.notice("Country directory mirror failed; trying fallback")
+            }
+        }
+
+        throw lastError ?? DirectoryError.noMirrors
+    }
+
     func recordClick(stationID: UUID) async {
         guard let mirror = mirrors.first else { return }
         var request = URLRequest(url: mirror.appending(path: "/json/url/\(stationID.uuidString)"))
@@ -80,6 +134,9 @@ actor RadioBrowserClient: RadioBrowserServing {
         ]
         if let field = query.field, !query.value.isEmpty {
             items.append(URLQueryItem(name: field.rawValue, value: query.value))
+        }
+        if let countryCode = query.countryCode, !countryCode.isEmpty {
+            items.append(URLQueryItem(name: "countrycode", value: countryCode.uppercased()))
         }
         components.queryItems = items
         guard let url = components.url else { throw DirectoryError.invalidRequest }
@@ -145,6 +202,32 @@ private extension RadioBrowserClient {
                 sources: [StationSource(url: streamURL, codec: codec, bitrate: bitrate, isHLS: hls == 1)],
                 votes: votes ?? 0
             )
+        }
+    }
+
+    struct CountryCodeRecord: Decodable {
+        let name: String
+        let stationCount: Int
+
+        enum CodingKeys: String, CodingKey {
+            case name
+            case stationCount = "stationcount"
+        }
+
+        init(from decoder: Decoder) throws {
+            let values = try decoder.container(keyedBy: CodingKeys.self)
+            name = try values.decode(String.self, forKey: .name)
+            if let integer = try? values.decode(Int.self, forKey: .stationCount) {
+                stationCount = integer
+            } else {
+                stationCount = Int(
+                    try values.decode(String.self, forKey: .stationCount)
+                ) ?? 0
+            }
+        }
+
+        var entry: CountryDirectoryEntry {
+            CountryDirectoryEntry(code: name, stationCount: stationCount)
         }
     }
 }

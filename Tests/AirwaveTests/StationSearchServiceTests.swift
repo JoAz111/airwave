@@ -52,5 +52,7 @@ private actor DirectoryFake: RadioBrowserServing {
         return stationsToReturn
     }
 
+    func countryCodes() async throws -> [CountryDirectoryEntry] { [] }
+
     func recordClick(stationID: UUID) async {}
 }
