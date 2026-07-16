@@ -14,7 +14,12 @@ import SwiftUI
         let directory = RadioBrowserClient()
         let player = RadioPlayer()
         let preferences = PreferencesStore()
-        _model = State(initialValue: AppModel(search: StationSearchService(directory: directory), player: player, preferences: preferences))
+        _model = State(initialValue: AppModel(
+            search: StationSearchService(directory: directory),
+            countries: CountryService(directory: directory),
+            player: player,
+            preferences: preferences
+        ))
     }
 
     var body: some Scene {

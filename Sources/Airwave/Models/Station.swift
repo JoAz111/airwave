@@ -40,6 +40,7 @@ struct NowPlayingMetadata: Codable, Equatable, Sendable {
 
 enum LibraryMode: String, CaseIterable, Identifiable, Sendable {
     case explore = "Explore"
+    case countries = "Countries"
     case favorites = "Favorites"
     case recent = "Recent"
 
