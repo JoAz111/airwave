@@ -4,6 +4,7 @@ import ImageIO
 
 struct DecodedArtwork {
     let image: NSImage
+    let cgImage: CGImage
     let pixelWidth: Int
     let pixelHeight: Int
     let bytesPerRow: Int
@@ -67,6 +68,7 @@ struct DecodedArtwork {
                 cgImage: cgImage,
                 size: NSSize(width: cgImage.width, height: cgImage.height)
             ),
+            cgImage: cgImage,
             pixelWidth: cgImage.width,
             pixelHeight: cgImage.height,
             bytesPerRow: cgImage.bytesPerRow
@@ -79,8 +81,7 @@ struct DecodedArtwork {
         if let image = stationCache.object(forKey: cacheKey) { return image }
 
         for url in directIconURLs(for: station) {
-            if let image = await image(for: url, maxPixelSize: pixelSize),
-               Self.isUsableStationArtwork(image) {
+            if let image = await stationImage(for: url, maxPixelSize: pixelSize) {
                 stationCache.setObject(image, forKey: cacheKey)
                 return image
             }
@@ -94,8 +95,7 @@ struct DecodedArtwork {
 
         for url in discoveredURLs + fallbackURLs {
             for candidate in secureCandidates(for: url) {
-                if let image = await image(for: candidate, maxPixelSize: pixelSize),
-                   Self.isUsableStationArtwork(image) {
+                if let image = await stationImage(for: candidate, maxPixelSize: pixelSize) {
                     stationCache.setObject(image, forKey: cacheKey)
                     return image
                 }
@@ -106,11 +106,32 @@ struct DecodedArtwork {
     }
 
     func image(for url: URL?, maxPixelSize: Int = 320) async -> NSImage? {
+        await image(
+            for: url,
+            maxPixelSize: maxPixelSize,
+            requiresStationValidation: false
+        )
+    }
+
+    private func stationImage(for url: URL?, maxPixelSize: Int) async -> NSImage? {
+        await image(
+            for: url,
+            maxPixelSize: maxPixelSize,
+            requiresStationValidation: true
+        )
+    }
+
+    private func image(
+        for url: URL?,
+        maxPixelSize: Int,
+        requiresStationValidation: Bool
+    ) async -> NSImage? {
         guard let url, ["http", "https"].contains(url.scheme?.lowercased() ?? "") else {
             return nil
         }
         let pixelSize = max(32, maxPixelSize)
-        let cacheKey = "\(url.absoluteString)#\(pixelSize)" as NSString
+        let validationKey = requiresStationValidation ? "station" : "general"
+        let cacheKey = "\(url.absoluteString)#\(pixelSize)#\(validationKey)" as NSString
         if let image = cache.object(forKey: cacheKey) { return image }
         var request = URLRequest(url: url)
         request.timeoutInterval = 8
@@ -118,6 +139,7 @@ struct DecodedArtwork {
         guard let (data, response) = try? await session.data(for: request),
               let http = response as? HTTPURLResponse,
               (200 ... 299).contains(http.statusCode),
+              !requiresStationValidation || Self.isUsableStationArtwork(data),
               let decoded = Self.decode(data, maxPixelSize: pixelSize) else { return nil }
         cache.setObject(decoded.image, forKey: cacheKey, cost: decoded.cost)
         return decoded.image
@@ -188,20 +210,53 @@ struct DecodedArtwork {
         }
     }
 
-    nonisolated static func isUsableStationArtwork(_ image: NSImage) -> Bool {
-        guard let data = image.tiffRepresentation,
-              let bitmap = NSBitmapImageRep(data: data) else {
+    nonisolated static func isUsableStationArtwork(_ data: Data) -> Bool {
+        guard let source = CGImageSourceCreateWithData(
+            data as CFData,
+            [kCGImageSourceShouldCache: false] as CFDictionary
+        ),
+              let properties = CGImageSourceCopyPropertiesAtIndex(
+                  source,
+                  0,
+                  [kCGImageSourceShouldCache: false] as CFDictionary
+              ) as NSDictionary?,
+              let width = imageDimension(
+                  in: properties,
+                  primaryKey: kCGImagePropertyPixelWidth,
+                  fallbackKey: kCGImagePropertyWidth
+              ),
+              let height = imageDimension(
+                  in: properties,
+                  primaryKey: kCGImagePropertyPixelHeight,
+                  fallbackKey: kCGImagePropertyHeight
+              ),
+              hasUsableDimensions(width: width, height: height),
+              let sample = decode(data, maxPixelSize: 32) else {
             return false
         }
+        return hasSubstantialContent(in: sample.cgImage)
+    }
 
+    nonisolated private static func imageDimension(
+        in properties: NSDictionary,
+        primaryKey: CFString,
+        fallbackKey: CFString
+    ) -> Int? {
+        (properties[primaryKey] as? NSNumber)?.intValue
+            ?? (properties[fallbackKey] as? NSNumber)?.intValue
+    }
+
+    nonisolated private static func hasUsableDimensions(width: Int, height: Int) -> Bool {
+        guard min(width, height) >= 96 else { return false }
+        return (0.60 ... 1.67).contains(Double(width) / Double(height))
+    }
+
+    nonisolated private static func hasSubstantialContent(in image: CGImage) -> Bool {
+        let bitmap = NSBitmapImageRep(cgImage: image)
         let width = bitmap.pixelsWide
         let height = bitmap.pixelsHigh
-        guard min(width, height) >= 96 else { return false }
-
-        let aspectRatio = Double(width) / Double(height)
-        guard (0.60 ... 1.67).contains(aspectRatio) else { return false }
-
-        let sampleSize = 32
+        let sampleSize = min(32, width, height)
+        guard sampleSize > 0 else { return false }
         let cornerPoints = [
             (0, 0),
             (width - 1, 0),

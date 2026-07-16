@@ -26,45 +26,49 @@ struct ArtworkLoaderTests {
     }
 
     @Test
-    func rejectsTinyStationArtwork() {
+    func rejectsTinyStationArtwork() throws {
         let image = image(size: NSSize(width: 32, height: 32)) {
             NSColor.systemRed.setFill()
             NSRect(x: 0, y: 0, width: 32, height: 32).fill()
         }
+        let data = try #require(pngData(for: image))
 
-        #expect(!ArtworkLoader.isUsableStationArtwork(image))
+        #expect(!ArtworkLoader.isUsableStationArtwork(data))
     }
 
     @Test
-    func rejectsExtremeAspectRatioArtwork() {
+    func rejectsExtremeAspectRatioArtwork() throws {
         let image = image(size: NSSize(width: 320, height: 40)) {
             NSColor.systemBlue.setFill()
             NSRect(x: 0, y: 0, width: 320, height: 40).fill()
         }
+        let data = try #require(pngData(for: image))
 
-        #expect(!ArtworkLoader.isUsableStationArtwork(image))
+        #expect(!ArtworkLoader.isUsableStationArtwork(data))
     }
 
     @Test
-    func rejectsNarrowMalformedArtwork() {
+    func rejectsNarrowMalformedArtwork() throws {
         let image = image(size: NSSize(width: 256, height: 256)) {
             NSColor.black.setFill()
             NSRect(x: 118, y: 0, width: 20, height: 256).fill()
         }
+        let data = try #require(pngData(for: image))
 
-        #expect(!ArtworkLoader.isUsableStationArtwork(image))
+        #expect(!ArtworkLoader.isUsableStationArtwork(data))
     }
 
     @Test
-    func acceptsSubstantialSquareArtwork() {
+    func acceptsSubstantialSquareArtwork() throws {
         let image = image(size: NSSize(width: 256, height: 256)) {
             NSColor.white.setFill()
             NSRect(x: 0, y: 0, width: 256, height: 256).fill()
             NSColor.systemBlue.setFill()
             NSBezierPath(ovalIn: NSRect(x: 38, y: 38, width: 180, height: 180)).fill()
         }
+        let data = try #require(pngData(for: image))
 
-        #expect(ArtworkLoader.isUsableStationArtwork(image))
+        #expect(ArtworkLoader.isUsableStationArtwork(data))
     }
 
     @Test
@@ -93,5 +97,13 @@ struct ArtworkLoaderTests {
         drawing()
         image.unlockFocus()
         return image
+    }
+
+    private func pngData(for image: NSImage) -> Data? {
+        guard let tiffData = image.tiffRepresentation,
+              let bitmap = NSBitmapImageRep(data: tiffData) else {
+            return nil
+        }
+        return bitmap.representation(using: .png, properties: [:])
     }
 }
