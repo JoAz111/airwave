@@ -10,18 +10,13 @@ struct MainWindowView: View {
                     model.searchPlaceholder,
                     text: Binding(get: { model.query }, set: model.updateQuery)
                 ).textFieldStyle(.roundedBorder)
-                Picker(
-                    "Library",
-                    selection: Binding(
-                        get: { model.libraryMode },
-                        set: { mode in Task { await model.activate(mode) } }
-                    )
-                ) {
-                    ForEach(LibraryMode.allCases) { Text($0.rawValue).tag($0) }
-                }.pickerStyle(.segmented).labelsHidden()
+                LibraryTabBar(model: model)
             }.padding()
             Group {
-                if model.isLoading && model.visibleStations.isEmpty { ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity) }
+                if model.libraryMode == .countries {
+                    CountryBrowserView(model: model, artwork: artwork)
+                }
+                else if model.isLoading && model.visibleStations.isEmpty { ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity) }
                 else if let error = model.errorMessage, model.visibleStations.isEmpty { ContentUnavailableView("Stations unavailable", systemImage: "wifi.exclamationmark", description: Text(error)).overlay(alignment: .bottom) { Button("Retry") { model.retry() }.padding() } }
                 else { List(model.visibleStations) { StationRow(station: $0, model: model, artwork: artwork) }.listStyle(.plain) }
             }
