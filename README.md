@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="Packaging/AppIconSource.png" alt="Airwave app icon" width="144">
+
 # Airwave
 
 ### A tiny, native internet radio player for macOS.
@@ -17,7 +19,9 @@ Airwave is a free, open-source radio player built specifically for the Mac. It c
 
 ## What Airwave does
 
-- Searches a global catalog by station, country, language, or genre
+- Opens Explore with high-quality stations from your Mac's configured region
+- Browses radio by country in a dedicated searchable Countries tab with flags
+- Searches stations, languages, and genres globally
 - Prefers healthy, high-bitrate streams when multiple sources are available
 - Plays and pauses live radio with native `AVPlayer` playback
 - Shows live song or program metadata when the station provides it
@@ -35,13 +39,14 @@ There are no accounts, recommendations, social features, analytics, ads, subscri
 
 ## The interface
 
-The main window is a compact station browser with three simple views:
+The main window is a compact station browser with four simple views:
 
-- **Explore** for global search and discovery
+- **Explore** for nearby discovery and global station search
+- **Countries** for a locale-first, alphabetical country browser with flags
 - **Favorites** for stations you want to keep
 - **Recent** for getting back to something quickly
 
-The now-playing bar stays visible at the bottom and shows the station's live song or program metadata when available. A small menu-bar popover shows the active station, current metadata, play/pause, volume, and a button to reopen Airwave.
+The station list continues behind floating Liquid Glass search and playback controls. The now-playing capsule stays visible at the bottom and shows the station's live song or program metadata when available. A small branded menu-bar controller shows the active station, current metadata, play/pause, volume, and a button to reopen Airwave.
 
 ## Radio directory
 
@@ -52,6 +57,8 @@ Radio Browser is a community-maintained catalog, so no directory can guarantee e
 ## Privacy
 
 Airwave itself has no accounts, analytics, advertising SDKs, or telemetry.
+
+Explore reads the Mac's configured region locally to choose its initial stations. Airwave never requests Location Services and never calls an IP-geolocation provider.
 
 Using the app makes network requests to Radio Browser for station data, to station websites for artwork, and to the selected broadcaster for audio. Those services can receive normal connection information such as your IP address and user agent.
 
@@ -70,7 +77,7 @@ cd airwave
 ./script/build_and_run.sh
 ```
 
-The script builds the Swift package, stages `dist/Airwave.app`, applies the sandbox and outgoing-network entitlements, signs it locally, and launches it as a normal foreground Mac app. Run the complete offline test suite with:
+The script builds the Swift package, compiles the native app-icon catalog, stages `dist/Airwave.app`, applies the sandbox and outgoing-network entitlements, signs it locally, and launches it as a normal foreground Mac app. Run the complete offline test suite with:
 
 ```bash
 DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer swift test
@@ -78,7 +85,7 @@ DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer swift test
 
 ## Status
 
-Airwave is a working development preview. Global search, high-quality source selection, playback, live metadata, favorites, recents, cached artwork, and menu-bar controls are implemented. Packaged releases and a polished app icon are still to come.
+Airwave is a working development preview. Locale-led discovery, country browsing, global search, high-quality source selection, playback, live metadata, favorites, recents, cached artwork, native Liquid Glass, the Airwave icon, and menu-bar controls are implemented. Packaged releases are still to come.
 
 If that sounds fun, star the repository and follow along.
 
