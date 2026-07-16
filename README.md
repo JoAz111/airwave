@@ -19,6 +19,7 @@ Airwave is a free, open-source radio player built specifically for the Mac. It c
 - Searches a global catalog by station, country, language, or genre
 - Prefers healthy, high-bitrate streams when multiple sources are available
 - Plays and pauses live radio with native `AVPlayer` playback
+- Shows live song or program metadata when the station provides it
 - Controls app-relative volume from the window or menu bar
 - Shows station logos with memory and disk caching
 - Remembers favorites, recent stations, the last station, and volume
@@ -39,7 +40,7 @@ The main window is a compact station browser with three simple views:
 - **Favorites** for stations you want to keep
 - **Recent** for getting back to something quickly
 
-The now-playing bar stays visible at the bottom. A small menu-bar popover shows the active station, play/pause, volume, and a button to reopen Airwave.
+The now-playing bar stays visible at the bottom and shows the station's live song or program metadata when available. A small menu-bar popover shows the active station, current metadata, play/pause, volume, and a button to reopen Airwave.
 
 ## Radio directory
 
