@@ -67,6 +67,24 @@ struct ArtworkLoaderTests {
         #expect(ArtworkLoader.isUsableStationArtwork(image))
     }
 
+    @Test
+    func downsampledArtworkFitsPixelBudgetAndReportsDecodedCost() throws {
+        let source = image(size: NSSize(width: 1_024, height: 512)) {
+            NSColor.systemPurple.setFill()
+            NSRect(x: 0, y: 0, width: 1_024, height: 512).fill()
+        }
+        let tiffData = try #require(source.tiffRepresentation)
+
+        let decoded = try #require(
+            ArtworkLoader.decode(tiffData, maxPixelSize: 256)
+        )
+
+        #expect(decoded.pixelWidth == 256)
+        #expect(decoded.pixelHeight == 128)
+        #expect(decoded.cost == decoded.bytesPerRow * decoded.pixelHeight)
+        #expect(decoded.cost <= 256 * 128 * 4)
+    }
+
     private func image(size: NSSize, drawing: () -> Void) -> NSImage {
         let image = NSImage(size: size)
         image.lockFocus()

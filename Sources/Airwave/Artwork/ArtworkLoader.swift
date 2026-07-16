@@ -1,8 +1,18 @@
 import AppKit
 import Foundation
+import ImageIO
+
+struct DecodedArtwork {
+    let image: NSImage
+    let pixelWidth: Int
+    let pixelHeight: Int
+    let bytesPerRow: Int
+
+    var cost: Int { bytesPerRow * pixelHeight }
+}
 
 @MainActor final class ArtworkLoader {
-    private let cache = NSCache<NSURL, NSImage>()
+    private let cache = NSCache<NSString, NSImage>()
     private let stationCache = NSCache<NSString, NSImage>()
     private let session: URLSession
 
@@ -13,12 +23,64 @@ import Foundation
         session = URLSession(configuration: configuration)
     }
 
-    func image(for station: Station) async -> NSImage? {
-        let cacheKey = station.id.uuidString as NSString
+    nonisolated static func decode(_ data: Data, maxPixelSize: Int) -> DecodedArtwork? {
+        guard maxPixelSize > 0,
+              let source = CGImageSourceCreateWithData(
+                  data as CFData,
+                  [kCGImageSourceShouldCache: false] as CFDictionary
+              ) else {
+            return nil
+        }
+
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
+            kCGImageSourceShouldCacheImmediately: true
+        ]
+        guard let thumbnail = CGImageSourceCreateThumbnailAtIndex(
+            source,
+            0,
+            options as CFDictionary
+        ),
+              let colorSpace = CGColorSpace(name: CGColorSpace.sRGB),
+              let context = CGContext(
+                  data: nil,
+                  width: thumbnail.width,
+                  height: thumbnail.height,
+                  bitsPerComponent: 8,
+                  bytesPerRow: thumbnail.width * 4,
+                  space: colorSpace,
+                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+              ) else {
+            return nil
+        }
+        context.interpolationQuality = .high
+        context.draw(
+            thumbnail,
+            in: CGRect(x: 0, y: 0, width: thumbnail.width, height: thumbnail.height)
+        )
+        guard let cgImage = context.makeImage() else { return nil }
+
+        return DecodedArtwork(
+            image: NSImage(
+                cgImage: cgImage,
+                size: NSSize(width: cgImage.width, height: cgImage.height)
+            ),
+            pixelWidth: cgImage.width,
+            pixelHeight: cgImage.height,
+            bytesPerRow: cgImage.bytesPerRow
+        )
+    }
+
+    func image(for station: Station, maxPixelSize: Int = 320) async -> NSImage? {
+        let pixelSize = max(32, maxPixelSize)
+        let cacheKey = "\(station.id.uuidString)#\(pixelSize)" as NSString
         if let image = stationCache.object(forKey: cacheKey) { return image }
 
         for url in directIconURLs(for: station) {
-            if let image = await image(for: url), Self.isUsableStationArtwork(image) {
+            if let image = await image(for: url, maxPixelSize: pixelSize),
+               Self.isUsableStationArtwork(image) {
                 stationCache.setObject(image, forKey: cacheKey)
                 return image
             }
@@ -32,7 +94,8 @@ import Foundation
 
         for url in discoveredURLs + fallbackURLs {
             for candidate in secureCandidates(for: url) {
-                if let image = await image(for: candidate), Self.isUsableStationArtwork(image) {
+                if let image = await image(for: candidate, maxPixelSize: pixelSize),
+                   Self.isUsableStationArtwork(image) {
                     stationCache.setObject(image, forKey: cacheKey)
                     return image
                 }
@@ -42,20 +105,22 @@ import Foundation
         return nil
     }
 
-    func image(for url: URL?) async -> NSImage? {
+    func image(for url: URL?, maxPixelSize: Int = 320) async -> NSImage? {
         guard let url, ["http", "https"].contains(url.scheme?.lowercased() ?? "") else {
             return nil
         }
-        if let image = cache.object(forKey: url as NSURL) { return image }
+        let pixelSize = max(32, maxPixelSize)
+        let cacheKey = "\(url.absoluteString)#\(pixelSize)" as NSString
+        if let image = cache.object(forKey: cacheKey) { return image }
         var request = URLRequest(url: url)
         request.timeoutInterval = 8
         request.setValue("image/*", forHTTPHeaderField: "Accept")
         guard let (data, response) = try? await session.data(for: request),
               let http = response as? HTTPURLResponse,
               (200 ... 299).contains(http.statusCode),
-              let image = NSImage(data: data) else { return nil }
-        cache.setObject(image, forKey: url as NSURL, cost: data.count)
-        return image
+              let decoded = Self.decode(data, maxPixelSize: pixelSize) else { return nil }
+        cache.setObject(decoded.image, forKey: cacheKey, cost: decoded.cost)
+        return decoded.image
     }
 
     private func directIconURLs(for station: Station) -> [URL] {
