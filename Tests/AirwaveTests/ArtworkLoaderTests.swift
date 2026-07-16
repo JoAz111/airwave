@@ -89,6 +89,27 @@ struct ArtworkLoaderTests {
         #expect(decoded.cost <= 256 * 128 * 4)
     }
 
+    @Test
+    func requestLimiterCapsConcurrentArtworkFetches() async {
+        let limiter = ArtworkRequestLimiter(limit: 2)
+        let tracker = ConcurrencyTracker()
+
+        await withTaskGroup(of: Void.self) { group in
+            for _ in 0 ..< 8 {
+                group.addTask {
+                    await limiter.acquire()
+                    await tracker.enter()
+                    try? await Task.sleep(for: .milliseconds(20))
+                    await tracker.leave()
+                    await limiter.release()
+                }
+            }
+        }
+
+        let maximum = await tracker.maximum
+        #expect(maximum == 2)
+    }
+
     private func image(size: NSSize, drawing: () -> Void) -> NSImage {
         let image = NSImage(size: size)
         image.lockFocus()
@@ -105,5 +126,19 @@ struct ArtworkLoaderTests {
             return nil
         }
         return bitmap.representation(using: .png, properties: [:])
+    }
+}
+
+private actor ConcurrencyTracker {
+    private var active = 0
+    private(set) var maximum = 0
+
+    func enter() {
+        active += 1
+        maximum = max(maximum, active)
+    }
+
+    func leave() {
+        active -= 1
     }
 }

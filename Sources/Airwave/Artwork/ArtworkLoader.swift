@@ -1,4 +1,5 @@
 import AppKit
+import Dispatch
 import Foundation
 import ImageIO
 
@@ -12,16 +13,68 @@ struct DecodedArtwork {
     var cost: Int { bytesPerRow * pixelHeight }
 }
 
+actor ArtworkRequestLimiter {
+    private let limit: Int
+    private var available: Int
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    init(limit: Int) {
+        self.limit = max(1, limit)
+        available = max(1, limit)
+    }
+
+    func acquire() async {
+        if available > 0 {
+            available -= 1
+            return
+        }
+        await withCheckedContinuation { continuation in
+            waiters.append(continuation)
+        }
+    }
+
+    func release() {
+        if waiters.isEmpty {
+            available = min(limit, available + 1)
+        } else {
+            waiters.removeFirst().resume()
+        }
+    }
+}
+
 @MainActor final class ArtworkLoader {
+    private static let cacheCostLimit = 16 * 1_024 * 1_024
+    private static let warningCacheCostLimit = 8 * 1_024 * 1_024
+
     private let cache = NSCache<NSString, NSImage>()
-    private let stationCache = NSCache<NSString, NSImage>()
+    private let stationIconCache = NSCache<NSString, NSURL>()
+    private let requestLimiter = ArtworkRequestLimiter(limit: 8)
     private let session: URLSession
+    private let memoryPressureSource: any DispatchSourceMemoryPressure
+    private var shouldCacheImages = true
 
     init() {
-        cache.totalCostLimit = 24 * 1_024 * 1_024
+        cache.totalCostLimit = Self.cacheCostLimit
+        cache.countLimit = 80
+        stationIconCache.countLimit = 256
+
         let configuration = URLSessionConfiguration.default
-        configuration.urlCache = URLCache(memoryCapacity: 8 * 1_024 * 1_024, diskCapacity: 96 * 1_024 * 1_024)
+        configuration.urlCache = URLCache(
+            memoryCapacity: 0,
+            diskCapacity: 96 * 1_024 * 1_024
+        )
+        configuration.httpMaximumConnectionsPerHost = 4
         session = URLSession(configuration: configuration)
+
+        let pressureSource = DispatchSource.makeMemoryPressureSource(
+            eventMask: .all,
+            queue: .main
+        )
+        memoryPressureSource = pressureSource
+        pressureSource.setEventHandler { [weak self] in
+            self?.handleMemoryPressure()
+        }
+        pressureSource.activate()
     }
 
     nonisolated static func decode(_ data: Data, maxPixelSize: Int) -> DecodedArtwork? {
@@ -77,16 +130,25 @@ struct DecodedArtwork {
 
     func image(for station: Station, maxPixelSize: Int = 320) async -> NSImage? {
         let pixelSize = max(32, maxPixelSize)
-        let cacheKey = "\(station.id.uuidString)#\(pixelSize)" as NSString
-        if let image = stationCache.object(forKey: cacheKey) { return image }
+        let stationKey = station.id.uuidString as NSString
+
+        if let resolvedURL = stationIconCache.object(forKey: stationKey),
+           let image = await stationImage(
+               for: resolvedURL as URL,
+               maxPixelSize: pixelSize
+           ) {
+            return image
+        }
 
         for url in directIconURLs(for: station) {
+            guard !Task.isCancelled else { return nil }
             if let image = await stationImage(for: url, maxPixelSize: pixelSize) {
-                stationCache.setObject(image, forKey: cacheKey)
+                cacheStationIcon(url, forKey: stationKey)
                 return image
             }
         }
 
+        guard !Task.isCancelled else { return nil }
         guard let homepageURL = station.homepageURL else { return nil }
         let discoveredURLs = await discoverIconURLs(at: homepageURL)
         let fallbackURLs = ["/apple-touch-icon.png", "/favicon.ico"].compactMap {
@@ -95,8 +157,9 @@ struct DecodedArtwork {
 
         for url in discoveredURLs + fallbackURLs {
             for candidate in secureCandidates(for: url) {
+                guard !Task.isCancelled else { return nil }
                 if let image = await stationImage(for: candidate, maxPixelSize: pixelSize) {
-                    stationCache.setObject(image, forKey: cacheKey)
+                    cacheStationIcon(candidate, forKey: stationKey)
                     return image
                 }
             }
@@ -136,13 +199,21 @@ struct DecodedArtwork {
         var request = URLRequest(url: url)
         request.timeoutInterval = 8
         request.setValue("image/*", forHTTPHeaderField: "Accept")
-        guard let (data, response) = try? await session.data(for: request),
-              let http = response as? HTTPURLResponse,
-              (200 ... 299).contains(http.statusCode),
-              !requiresStationValidation || Self.isUsableStationArtwork(data),
-              let decoded = Self.decode(data, maxPixelSize: pixelSize) else { return nil }
-        cache.setObject(decoded.image, forKey: cacheKey, cost: decoded.cost)
-        return decoded.image
+        do {
+            let (data, response) = try await fetch(request)
+            guard let http = response as? HTTPURLResponse,
+                  (200 ... 299).contains(http.statusCode),
+                  !requiresStationValidation || Self.isUsableStationArtwork(data),
+                  let decoded = Self.decode(data, maxPixelSize: pixelSize) else {
+                return nil
+            }
+            if shouldCacheImages {
+                cache.setObject(decoded.image, forKey: cacheKey, cost: decoded.cost)
+            }
+            return decoded.image
+        } catch {
+            return nil
+        }
     }
 
     private func directIconURLs(for station: Station) -> [URL] {
@@ -171,21 +242,60 @@ struct DecodedArtwork {
 
     private func discoverIconURLs(at homepageURL: URL) async -> [URL] {
         for url in secureCandidates(for: homepageURL) {
+            guard !Task.isCancelled else { return [] }
             var request = URLRequest(url: url)
             request.timeoutInterval = 8
             request.setValue("text/html", forHTTPHeaderField: "Accept")
-            guard let (data, response) = try? await session.data(for: request),
-                  let http = response as? HTTPURLResponse,
+            guard let result = try? await fetch(request),
+                  let http = result.1 as? HTTPURLResponse,
                   (200 ... 299).contains(http.statusCode) else {
                 continue
             }
+            let data = result.0
             let html = String(decoding: data.prefix(524_288), as: UTF8.self)
             return Self.iconURLs(
                 in: html,
-                baseURL: response.url ?? url
+                baseURL: result.1.url ?? url
             )
         }
         return []
+    }
+
+    private func fetch(_ request: URLRequest) async throws -> (Data, URLResponse) {
+        await requestLimiter.acquire()
+        let result: (Data, URLResponse)
+        do {
+            try Task.checkCancellation()
+            result = try await session.data(for: request)
+        } catch {
+            await requestLimiter.release()
+            throw error
+        }
+        await requestLimiter.release()
+        try Task.checkCancellation()
+        return result
+    }
+
+    private func cacheStationIcon(_ url: URL, forKey key: NSString) {
+        guard shouldCacheImages else { return }
+        stationIconCache.setObject(url as NSURL, forKey: key)
+    }
+
+    private func handleMemoryPressure() {
+        let event = memoryPressureSource.data
+        if event.contains(.critical) {
+            shouldCacheImages = false
+            cache.removeAllObjects()
+            stationIconCache.removeAllObjects()
+        } else if event.contains(.warning) {
+            shouldCacheImages = false
+            cache.totalCostLimit = Self.warningCacheCostLimit
+            cache.countLimit = 32
+        } else if event.contains(.normal) {
+            shouldCacheImages = true
+            cache.totalCostLimit = Self.cacheCostLimit
+            cache.countLimit = 80
+        }
     }
 
     nonisolated static func iconURLs(in html: String, baseURL: URL) -> [URL] {
