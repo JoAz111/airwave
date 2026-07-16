@@ -9,6 +9,7 @@ docs/superpowers/
 
 # Xcode user state and build output
 DerivedData/
+dist/
 *.xcuserstate
 xcuserdata/
 *.xccheckout
