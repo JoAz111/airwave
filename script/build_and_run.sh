@@ -29,6 +29,9 @@ DEVELOPER_DIR="$DEVELOPER_DIR" xcrun actool "$ROOT_DIR/Packaging/Assets.xcassets
   --warnings \
   --notices
 cp "$ROOT_DIR/Packaging/MenuBarIcon.png" "$APP_CONTENTS/Resources/MenuBarIcon.png"
+cp "$ROOT_DIR/Packaging/MenuBarIcon@2x.png" "$APP_CONTENTS/Resources/MenuBarIcon@2x.png"
+cp "$ROOT_DIR/Packaging/ToolbarIcon.png" "$APP_CONTENTS/Resources/ToolbarIcon.png"
+cp "$ROOT_DIR/Packaging/ToolbarIcon@2x.png" "$APP_CONTENTS/Resources/ToolbarIcon@2x.png"
 chmod +x "$APP_BINARY"
 codesign --force --sign - --entitlements "$ROOT_DIR/Packaging/Airwave.entitlements" "$APP_BUNDLE"
 
