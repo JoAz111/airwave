@@ -1,11 +1,26 @@
+import AppKit
 import SwiftUI
 
-@main
-struct AirwaveApp: App {
+@MainActor final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) { NSApp.setActivationPolicy(.regular); NSApp.activate(ignoringOtherApps: true) }
+}
+
+@main struct AirwaveApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @State private var model: AppModel
+    private let artwork = ArtworkLoader()
+
+    init() {
+        let directory = RadioBrowserClient()
+        let player = RadioPlayer()
+        let preferences = PreferencesStore()
+        _model = State(initialValue: AppModel(search: StationSearchService(directory: directory), player: player, preferences: preferences))
+    }
+
     var body: some Scene {
-        WindowGroup("Airwave") {
-            Text("Airwave")
-                .frame(minWidth: 340, minHeight: 440)
-        }
+        WindowGroup("Airwave", id: "main") { MainWindowView(model: model, artwork: artwork).frame(idealWidth: 370, idealHeight: 560) }
+            .defaultSize(width: 370, height: 560)
+            .commands { CommandGroup(replacing: .newItem) {} }
+        MenuBarExtra("Airwave", systemImage: "antenna.radiowaves.left.and.right") { MenuBarPlayerView(model: model, artwork: artwork) }.menuBarExtraStyle(.window)
     }
 }
