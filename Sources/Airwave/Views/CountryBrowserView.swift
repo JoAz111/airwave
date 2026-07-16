@@ -18,6 +18,7 @@ struct CountryBrowserView: View {
 
     private var countryList: some View {
         List {
+            FloatingHeaderSpacer()
             ForEach(
                 Array(model.visibleCountries.enumerated()),
                 id: \.element.id
@@ -68,6 +69,7 @@ struct CountryBrowserView: View {
 
     private func selectedCountryList(_ country: Country) -> some View {
         List {
+            FloatingHeaderSpacer()
             Button { model.backToCountries() } label: {
                 Label("Countries", systemImage: "chevron.left")
                     .fontWeight(.semibold)

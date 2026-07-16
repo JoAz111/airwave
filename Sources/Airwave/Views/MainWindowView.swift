@@ -5,15 +5,15 @@ struct MainWindowView: View {
     let artwork: ArtworkLoader
 
     var body: some View {
-        VStack(spacing: 0) {
-            floatingHeader
+        ZStack(alignment: .top) {
             browser
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .overlay(alignment: .bottom) {
-                    NowPlayingBar(model: model, artwork: artwork)
-                        .padding(.horizontal, 10)
-                        .padding(.bottom, 10)
-                }
+            floatingHeader
+        }
+        .overlay(alignment: .bottom) {
+            NowPlayingBar(model: model, artwork: artwork)
+                .padding(.horizontal, 10)
+                .padding(.bottom, 10)
         }
         .frame(minWidth: 360, minHeight: 480)
         .background(Color(nsColor: .windowBackgroundColor))
@@ -56,8 +56,11 @@ struct MainWindowView: View {
             }
             .padding(.bottom, 84)
         } else {
-            List(model.visibleStations) { station in
-                StationRow(station: station, model: model, artwork: artwork)
+            List {
+                FloatingHeaderSpacer()
+                ForEach(model.visibleStations) { station in
+                    StationRow(station: station, model: model, artwork: artwork)
+                }
             }
             .airwaveBrowserList()
         }
