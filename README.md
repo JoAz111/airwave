@@ -7,6 +7,7 @@
 [![Platform](https://img.shields.io/badge/macOS-26%2B-111111?logo=apple)](https://www.apple.com/macos/)
 [![SwiftUI](https://img.shields.io/badge/UI-SwiftUI-F05138?logo=swift&logoColor=white)](https://developer.apple.com/xcode/swiftui/)
 [![Status](https://img.shields.io/badge/status-working_preview-1671E8)](#status)
+[![License](https://img.shields.io/badge/license-MIT-22A699)](LICENSE)
 
 Turn the dial. Keep the app out of the way.
 
@@ -84,6 +85,10 @@ If that sounds fun, star the repository and follow along.
 ## Contributing
 
 Airwave is intentionally narrow in scope. Bug fixes, accessibility improvements, native macOS polish, and focused performance work are welcome. Large new feature areas should start with a discussion so the project stays small.
+
+## License
+
+Airwave is available under the [MIT License](LICENSE).
 
 ---
 
