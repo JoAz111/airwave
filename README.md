@@ -6,7 +6,7 @@
 
 [![Platform](https://img.shields.io/badge/macOS-26%2B-111111?logo=apple)](https://www.apple.com/macos/)
 [![SwiftUI](https://img.shields.io/badge/UI-SwiftUI-F05138?logo=swift&logoColor=white)](https://developer.apple.com/xcode/swiftui/)
-[![Status](https://img.shields.io/badge/status-early_development-1671E8)](#status)
+[![Status](https://img.shields.io/badge/status-working_preview-1671E8)](#status)
 
 Turn the dial. Keep the app out of the way.
 
@@ -59,9 +59,25 @@ Using the app makes network requests to Radio Browser for station data, to stati
 - macOS 26 or later
 - An internet connection
 
+## Build and run
+
+Airwave currently builds with Xcode 27 beta while targeting macOS 26 and later.
+
+```bash
+git clone https://github.com/JoAz111/airwave.git
+cd airwave
+./script/build_and_run.sh
+```
+
+The script builds the Swift package, stages `dist/Airwave.app`, applies the sandbox and outgoing-network entitlements, signs it locally, and launches it as a normal foreground Mac app. Run the complete offline test suite with:
+
+```bash
+DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer swift test
+```
+
 ## Status
 
-Airwave is in early development and is not ready to install yet. The first milestone is a complete, lightweight player with search, favorites, recents, cached artwork, and menu-bar controls.
+Airwave is a working development preview. Global search, high-quality source selection, playback, live metadata, favorites, recents, cached artwork, and menu-bar controls are implemented. Packaged releases and a polished app icon are still to come.
 
 If that sounds fun, star the repository and follow along.
 
