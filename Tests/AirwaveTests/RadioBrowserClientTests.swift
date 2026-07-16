@@ -98,7 +98,7 @@ struct RadioBrowserClientTests {
       "hls":0,
       "votes":42,
       "lastcheckok":1
-    }] 
+    }]
     """#.utf8)
 
     private static let countryCodesJSON = Data(#"""
