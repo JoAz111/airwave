@@ -26,16 +26,15 @@ final class AppModel {
     private(set) var isLoading = false
     private(set) var errorMessage: String?
     private(set) var libraryMode: LibraryMode = .explore
-    var query = ""
-
     var volume: Float {
-        get { player.volume }
-        set {
-            player.volume = newValue
-            preferences.volume = player.volume
+        didSet {
+            let clampedVolume = min(1, max(0, volume))
+            player.volume = clampedVolume
+            preferences.volume = clampedVolume
             preferencesStore.save(preferences)
         }
     }
+    var query = ""
 
     var visibleCountries: [Country] {
         CountryCatalog.filter(countries, query: selectedCountry == nil ? query : "")
@@ -85,10 +84,11 @@ final class AppModel {
         self.localCountryCode = localCountryCode?.uppercased()
         let saved = preferences.load()
         self.preferences = saved
+        volume = saved.volume
         favorites = saved.favorites
         recents = saved.recents
         currentStation = saved.lastStation
-        player.volume = saved.volume
+        player.volume = volume
         player.onStateChange = { [weak self] in self?.playbackState = $0 }
         player.onMetadataChange = { [weak self] in self?.metadata = $0 }
     }

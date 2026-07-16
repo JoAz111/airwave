@@ -48,7 +48,12 @@ struct NowPlayingBar: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
-            .glassEffect(.regular, in: .capsule)
+            .background {
+                Capsule()
+                    .fill(.clear)
+                    .glassEffect(.regular, in: .capsule)
+                    .allowsHitTesting(false)
+            }
         }
     }
 

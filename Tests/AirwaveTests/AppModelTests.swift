@@ -41,6 +41,24 @@ struct AppModelTests {
     }
 
     @Test
+    func volumeUpdatesPlayerAndPreferences() {
+        let player = PlayerFake()
+        let preferences = PreferencesFake(value: AirwavePreferences(volume: 0.4))
+        let model = AppModel(
+            search: SearchFake(),
+            countries: CountryFake(values: []),
+            player: player,
+            preferences: preferences
+        )
+
+        model.volume = 0.25
+
+        #expect(model.volume == 0.25)
+        #expect(player.volume == 0.25)
+        #expect(preferences.value.volume == 0.25)
+    }
+
+    @Test
     func countriesTabPinsLocaleAndSearchesCountriesLocally() async {
         let values = [
             Country(code: "IL", name: "Israel", stationCount: 4, isLocal: true),
