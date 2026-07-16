@@ -17,6 +17,9 @@ struct LibraryTabBar: View {
         }
         .pickerStyle(.segmented)
         .labelsHidden()
+        .controlSize(.large)
+        .padding(4)
+        .glassEffect(.regular.interactive(), in: .capsule)
         .accessibilityLabel("Library")
     }
 }

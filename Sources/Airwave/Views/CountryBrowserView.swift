@@ -57,7 +57,7 @@ struct CountryBrowserView: View {
                 .accessibilityValue(country.isLocal ? "Mac Region" : "")
             }
         }
-        .listStyle(.plain)
+        .airwaveBrowserList()
         .overlay {
             if model.visibleCountries.isEmpty {
                 ContentUnavailableView.search(text: model.query)
@@ -104,7 +104,16 @@ struct CountryBrowserView: View {
                 }
             }
         }
-        .listStyle(.plain)
+        .airwaveBrowserList()
         .accessibilityLabel("Stations in \(country.name)")
+    }
+}
+
+extension View {
+    func airwaveBrowserList() -> some View {
+        listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .contentMargins(.top, 112, for: .scrollContent)
+            .contentMargins(.bottom, 86, for: .scrollContent)
     }
 }
