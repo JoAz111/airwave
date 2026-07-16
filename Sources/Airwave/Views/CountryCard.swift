@@ -2,113 +2,82 @@ import SwiftUI
 
 struct CountryCard: View {
     let country: Country
+    let artwork: ArtworkLoader
     let action: () -> Void
 
-    @Environment(\.colorScheme) private var colorScheme
+    @State private var flagImage: NSImage?
     @State private var isHovering = false
 
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(alignment: .top) {
-                    Text(country.flag)
-                        .font(.system(size: 34))
-                        .accessibilityHidden(true)
-                    Spacer(minLength: 6)
-                    if country.isLocal {
-                        Image(systemName: "location.fill")
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(accent)
-                            .padding(7)
-                            .background(.ultraThinMaterial, in: .circle)
-                            .help("Your Mac region")
-                    }
-                }
+            ZStack(alignment: .bottomLeading) {
+                flagBackground
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.12), .black.opacity(0.82)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
 
-                Spacer(minLength: 8)
-
-                Text(country.name)
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.82)
-
-                HStack(spacing: 5) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(country.name)
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.82)
                     Text(stationCount)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.white.opacity(0.78))
                         .lineLimit(1)
-                    Spacer(minLength: 2)
-                    Image(systemName: "arrow.up.right")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(accent)
-                        .accessibilityHidden(true)
                 }
-                .padding(.top, 5)
+                .padding(13)
             }
-            .padding(13)
             .aspectRatio(1, contentMode: .fit)
             .frame(maxWidth: .infinity)
-            .background(cardBackground)
+            .clipShape(.rect(cornerRadius: 18))
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .strokeBorder(.white.opacity(0.18), lineWidth: 1)
+            }
             .contentShape(.rect(cornerRadius: 18))
         }
         .buttonStyle(.plain)
-        .scaleEffect(isHovering ? 1.025 : 1)
+        .scaleEffect(isHovering ? 1.02 : 1)
         .shadow(
-            color: .black.opacity(isHovering ? 0.14 : 0.07),
-            radius: isHovering ? 10 : 4,
+            color: .black.opacity(isHovering ? 0.18 : 0.09),
+            radius: isHovering ? 10 : 5,
             y: isHovering ? 5 : 2
         )
-        .animation(.spring(duration: 0.22, bounce: 0.16), value: isHovering)
+        .animation(.spring(duration: 0.22, bounce: 0.14), value: isHovering)
         .onHover { isHovering = $0 }
-        .accessibilityLabel(country.name)
-        .accessibilityValue(accessibilityValue)
-    }
-
-    private var cardBackground: some View {
-        RoundedRectangle(cornerRadius: 18, style: .continuous)
-            .fill(Color(nsColor: .controlBackgroundColor))
-            .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                accent.opacity(colorScheme == .dark ? 0.34 : 0.22),
-                                accent.opacity(colorScheme == .dark ? 0.08 : 0.04)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-            }
-            .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .strokeBorder(
-                        isHovering ? accent.opacity(0.52) : Color.primary.opacity(0.08),
-                        lineWidth: 1
-                    )
-            }
-    }
-
-    private var accent: Color {
-        let value = country.code.unicodeScalars.reduce(0) { partial, scalar in
-            partial + Int(scalar.value)
+        .task(id: country.code) {
+            flagImage = await artwork.image(for: flagURL)
         }
-        return Color(
-            hue: Double((value * 47) % 360) / 360,
-            saturation: colorScheme == .dark ? 0.62 : 0.72,
-            brightness: colorScheme == .dark ? 0.92 : 0.78
-        )
+        .accessibilityLabel(country.name)
+        .accessibilityValue(stationCount)
+    }
+
+    @ViewBuilder
+    private var flagBackground: some View {
+        if let flagImage {
+            Image(nsImage: flagImage)
+                .resizable()
+                .scaledToFill()
+        } else {
+            Rectangle()
+                .fill(.quaternary)
+                .overlay {
+                    ProgressView()
+                        .controlSize(.small)
+                }
+        }
+    }
+
+    private var flagURL: URL? {
+        URL(string: "https://flagcdn.com/w320/\(country.code.lowercased()).png")
     }
 
     private var stationCount: String {
         guard country.stationCount > 0 else { return "Radio directory" }
         return "\(country.stationCount.formatted()) stations"
-    }
-
-    private var accessibilityValue: String {
-        [country.isLocal ? "Your Mac region" : nil, stationCount]
-            .compactMap { $0 }
-            .joined(separator: ", ")
     }
 }

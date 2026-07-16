@@ -48,6 +48,8 @@ The main window is a compact station browser with four simple views:
 
 The app uses an opaque system-adaptive canvas with Liquid Glass reserved for the search, animated section selector, and floating playback controls. The now-playing capsule stays visible at the bottom and shows the station's live song or program metadata when available. A small branded menu-bar controller shows the active station, current metadata, play/pause, volume, and a button to reopen Airwave.
 
+Country flag artwork is served by [FlagCDN / Flagpedia](https://flagpedia.net/download/api) and cached by the app.
+
 ## Radio directory
 
 Station discovery is powered by the free and open-source [Radio Browser](https://www.radio-browser.info/) community directory. Airwave filters broken entries, resolves stream URLs, and fails over between public directory mirrors when one is unavailable.

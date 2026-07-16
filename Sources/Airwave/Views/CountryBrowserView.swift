@@ -23,7 +23,7 @@ struct CountryBrowserView: View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 12) {
                 ForEach(model.visibleCountries) { country in
-                    CountryCard(country: country) {
+                    CountryCard(country: country, artwork: artwork) {
                         Task { await model.selectCountry(country) }
                     }
                 }
