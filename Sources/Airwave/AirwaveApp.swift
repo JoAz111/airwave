@@ -33,8 +33,12 @@ import SwiftUI
     }
 
     var body: some Scene {
-        WindowGroup("Airwave", id: "main") { MainWindowView(model: model, artwork: artwork).frame(idealWidth: 390, idealHeight: 590) }
-            .defaultSize(width: 390, height: 590)
+        WindowGroup("Airwave", id: "main") {
+            MainWindowView(model: model, artwork: artwork)
+                .frame(idealWidth: 700, idealHeight: 660)
+        }
+            .defaultSize(width: 700, height: 660)
+            .windowToolbarStyle(.unifiedCompact(showsTitle: false))
             .commands { CommandGroup(replacing: .newItem) {} }
         MenuBarExtra {
             MenuBarPlayerView(model: model, artwork: artwork)

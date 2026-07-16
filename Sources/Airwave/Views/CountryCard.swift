@@ -13,13 +13,8 @@ struct CountryCard: View {
             CountryFlagCardContent(country: country, flagImage: flagImage)
         }
         .buttonStyle(.plain)
-        .scaleEffect(isHovering ? 1.02 : 1)
-        .shadow(
-            color: .black.opacity(isHovering ? 0.18 : 0.09),
-            radius: isHovering ? 10 : 5,
-            y: isHovering ? 5 : 2
-        )
-        .animation(.spring(duration: 0.22, bounce: 0.14), value: isHovering)
+        .scaleEffect(isHovering ? 1.012 : 1)
+        .animation(.smooth(duration: 0.18), value: isHovering)
         .onHover { isHovering = $0 }
         .task(id: country.code) {
             flagImage = await artwork.image(for: flagURL)
@@ -47,7 +42,7 @@ struct CountryFlagCardContent: View {
                 flagBackground
                     .frame(width: geometry.size.width, height: geometry.size.height)
                 LinearGradient(
-                    colors: [.clear, .black.opacity(0.12), .black.opacity(0.82)],
+                    colors: [.clear, .black.opacity(0.08), .black.opacity(0.76)],
                     startPoint: .top,
                     endPoint: .bottom
                 )
@@ -63,18 +58,18 @@ struct CountryFlagCardContent: View {
                         .foregroundStyle(.white.opacity(0.78))
                         .lineLimit(1)
                 }
-                .padding(13)
+                .padding(12)
             }
             .frame(width: geometry.size.width, height: geometry.size.height)
             .clipped()
         }
         .aspectRatio(1, contentMode: .fit)
-        .clipShape(.rect(cornerRadius: 18))
+        .clipShape(.rect(cornerRadius: 14))
         .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .strokeBorder(.white.opacity(0.18), lineWidth: 1)
         }
-        .contentShape(.rect(cornerRadius: 18))
+        .contentShape(.rect(cornerRadius: 14))
     }
 
     @ViewBuilder

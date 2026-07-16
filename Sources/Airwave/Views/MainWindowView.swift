@@ -5,64 +5,40 @@ struct MainWindowView: View {
     let artwork: ArtworkLoader
 
     var body: some View {
-        ZStack(alignment: .top) {
-            browser
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            floatingHeader
-        }
+        browser
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         .overlay(alignment: .bottom) {
-            NowPlayingBar(model: model, artwork: artwork)
-                .padding(.horizontal, 10)
-                .padding(.bottom, 10)
+            if model.currentStation != nil {
+                NowPlayingBar(model: model, artwork: artwork)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 14)
+            }
         }
-        .frame(minWidth: 360, minHeight: 480)
-        .background(Color(nsColor: .windowBackgroundColor))
-        .containerBackground(Color(nsColor: .windowBackgroundColor), for: .window)
-        .tint(AirwaveStyle.accent)
-        .task { await model.start() }
-    }
-
-    private var floatingHeader: some View {
-        GlassEffectContainer(spacing: 10) {
-            VStack(spacing: 10) {
-                FloatingSearchField(
-                    placeholder: model.searchPlaceholder,
-                    text: Binding(get: { model.query }, set: model.updateQuery)
-                )
+        .frame(minWidth: 560, minHeight: 520)
+        .background(.white)
+        .containerBackground(.white, for: .window)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
                 LibraryTabBar(model: model)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.top, 10)
-        .padding(.bottom, 12)
+        .searchable(
+            text: Binding(get: { model.query }, set: model.updateQuery),
+            placement: .toolbar,
+            prompt: Text(model.searchPlaceholder)
+        )
+        .searchToolbarBehavior(.automatic)
+        .tint(AirwaveStyle.accent)
+        .preferredColorScheme(.light)
+        .task { await model.start() }
     }
 
     @ViewBuilder
     private var browser: some View {
         if model.libraryMode == .countries {
             CountryBrowserView(model: model, artwork: artwork)
-        } else if model.isLoading && model.visibleStations.isEmpty {
-            ProgressView()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding(.bottom, 84)
-        } else if let error = model.errorMessage, model.visibleStations.isEmpty {
-            ContentUnavailableView(
-                "Stations unavailable",
-                systemImage: "wifi.exclamationmark",
-                description: Text(error)
-            )
-            .overlay(alignment: .bottom) {
-                Button("Retry") { model.retry() }.padding()
-            }
-            .padding(.bottom, 84)
         } else {
-            List {
-                FloatingHeaderSpacer()
-                ForEach(model.visibleStations) { station in
-                    StationRow(station: station, model: model, artwork: artwork)
-                }
-            }
-            .airwaveBrowserList()
+            StationBrowserView(model: model, artwork: artwork)
         }
     }
 }

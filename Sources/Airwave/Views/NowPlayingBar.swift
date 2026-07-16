@@ -5,49 +5,48 @@ struct NowPlayingBar: View {
     let artwork: ArtworkLoader
 
     var body: some View {
-        GlassEffectContainer {
-            HStack(spacing: 10) {
-                if let station = model.currentStation {
-                    StationArtworkView(station: station, loader: artwork, size: 42)
-                }
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(model.currentStation?.name ?? "Choose a station")
-                        .fontWeight(.semibold)
-                        .lineLimit(1)
-                    Text(model.metadata?.displayText ?? stateText)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-                Spacer(minLength: 4)
-                Button { model.togglePlayback() } label: {
-                    ZStack {
-                        Image(systemName: model.playbackState == .playing ? "pause.fill" : "play.fill")
-                            .opacity(isBuffering ? 0 : 1)
-                        if isBuffering {
-                            ProgressView().controlSize(.small)
-                        }
+        HStack(spacing: 12) {
+            if let station = model.currentStation {
+                StationArtworkView(station: station, loader: artwork, size: 46)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(model.currentStation?.name ?? "Choose a station")
+                    .fontWeight(.semibold)
+                    .lineLimit(1)
+                Text(model.metadata?.displayText ?? stateText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 8)
+            Button { model.togglePlayback() } label: {
+                ZStack {
+                    Image(systemName: model.playbackState == .playing ? "pause.fill" : "play.fill")
+                        .opacity(isBuffering ? 0 : 1)
+                    if isBuffering {
+                        ProgressView().controlSize(.small)
                     }
-                    .font(.system(size: 16, weight: .bold))
-                    .frame(width: 34, height: 34)
-                    .contentShape(.circle)
                 }
-                .buttonStyle(.plain)
-                .disabled(model.currentStation == nil)
-                .help("Play or pause")
-                .accessibilityLabel(model.playbackState == .playing ? "Pause" : "Play")
-                PlayerVolumeSlider(model: model)
+                .font(.system(size: 15, weight: .bold))
+                .frame(width: 18, height: 18)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .frame(maxWidth: .infinity)
-            .background {
-                Capsule()
-                    .fill(.clear)
-                    .glassEffect(.regular, in: .capsule)
-                    .allowsHitTesting(false)
-            }
+            .buttonStyle(.glassProminent)
+            .buttonBorderShape(.circle)
+            .disabled(model.currentStation == nil)
+            .help("Play or pause")
+            .accessibilityLabel(model.playbackState == .playing ? "Pause" : "Play")
+
+            Divider().frame(height: 24)
+            Image(systemName: "speaker.fill")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+            PlayerVolumeSlider(model: model)
         }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .frame(maxWidth: 640)
+        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 26))
         .fixedSize(horizontal: false, vertical: true)
     }
 
@@ -76,7 +75,8 @@ struct PlayerVolumeSlider: View {
             ),
             in: 0 ... 1
         )
-        .frame(width: 88)
+        .controlSize(.small)
+        .frame(width: 96)
         .accessibilityLabel("Volume")
         .accessibilityIdentifier("player.volume")
     }

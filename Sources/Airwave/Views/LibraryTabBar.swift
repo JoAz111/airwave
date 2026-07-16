@@ -17,7 +17,8 @@ struct LibraryTabBar: View {
         }
         .pickerStyle(.segmented)
         .labelsHidden()
-        .controlSize(.large)
+        .controlSize(.regular)
+        .frame(width: 330)
         .accessibilityLabel("Library")
     }
 }

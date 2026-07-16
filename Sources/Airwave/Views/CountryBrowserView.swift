@@ -3,92 +3,105 @@ import SwiftUI
 struct CountryBrowserView: View {
     let model: AppModel
     let artwork: ArtworkLoader
+
     private let columns = [
-        GridItem(.adaptive(minimum: 118, maximum: 154), spacing: 12)
+        GridItem(.adaptive(minimum: 142, maximum: 190), spacing: 18)
     ]
 
     var body: some View {
         if let selectedCountry = model.selectedCountry {
-            selectedCountryList(selectedCountry)
-        } else if model.isLoading && model.visibleCountries.isEmpty {
-            ProgressView()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .accessibilityLabel("Loading countries")
+            selectedCountryView(selectedCountry)
         } else {
-            countryList
+            countryGrid
         }
     }
 
-    private var countryList: some View {
+    private var countryGrid: some View {
         ScrollView {
-            LazyVGrid(columns: columns, spacing: 12) {
-                ForEach(model.visibleCountries) { country in
-                    CountryCard(country: country, artwork: artwork) {
-                        Task { await model.selectCountry(country) }
+            VStack(alignment: .leading, spacing: 22) {
+                pageHeader(title: "Countries", subtitle: "Tune in around the world")
+
+                if model.isLoading && model.visibleCountries.isEmpty {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, minHeight: 340)
+                        .accessibilityLabel("Loading countries")
+                } else if model.visibleCountries.isEmpty {
+                    ContentUnavailableView.search(text: model.query)
+                        .frame(maxWidth: .infinity, minHeight: 340)
+                } else {
+                    LazyVGrid(columns: columns, alignment: .leading, spacing: 22) {
+                        ForEach(model.visibleCountries) { country in
+                            CountryCard(country: country, artwork: artwork) {
+                                Task { await model.selectCountry(country) }
+                            }
+                        }
                     }
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.top, 126)
-            .padding(.bottom, 104)
+            .padding(.horizontal, 24)
+            .padding(.top, 22)
+            .padding(.bottom, model.currentStation == nil ? 28 : 112)
         }
         .scrollIndicators(.automatic)
-        .overlay {
-            if model.visibleCountries.isEmpty {
-                ContentUnavailableView.search(text: model.query)
-            }
-        }
         .accessibilityLabel("Countries")
     }
 
-    private func selectedCountryList(_ country: Country) -> some View {
-        List {
-            FloatingHeaderSpacer()
-            Button { model.backToCountries() } label: {
-                Label("Countries", systemImage: "chevron.left")
-                    .fontWeight(.semibold)
-            }
-            .buttonStyle(.plain)
+    private func selectedCountryView(_ country: Country) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                Button { model.backToCountries() } label: {
+                    Label("Countries", systemImage: "chevron.left")
+                }
+                .buttonStyle(.plain)
+                .fontWeight(.semibold)
 
-            if model.isLoading && model.visibleStations.isEmpty {
-                HStack {
-                    Spacer()
-                    ProgressView()
-                    Spacer()
-                }
-                .listRowSeparator(.hidden)
-            } else if let error = model.errorMessage, model.visibleStations.isEmpty {
-                VStack(spacing: 10) {
-                    Label(error, systemImage: "wifi.exclamationmark")
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                    Button("Retry") { model.retry() }
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 30)
-                .listRowSeparator(.hidden)
-            } else if model.visibleStations.isEmpty {
-                ContentUnavailableView(
-                    "No stations in \(country.name)",
-                    systemImage: "radio",
-                    description: Text("Try another country.")
+                pageHeader(
+                    title: country.name,
+                    subtitle: "\(country.stationCount.formatted()) live stations"
                 )
-                .listRowSeparator(.hidden)
-            } else {
-                ForEach(model.visibleStations) { station in
-                    StationRow(station: station, model: model, artwork: artwork)
+
+                if model.isLoading && model.visibleStations.isEmpty {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, minHeight: 320)
+                } else if let error = model.errorMessage, model.visibleStations.isEmpty {
+                    ContentUnavailableView(
+                        "Stations unavailable",
+                        systemImage: "wifi.exclamationmark",
+                        description: Text(error)
+                    )
+                    .frame(maxWidth: .infinity, minHeight: 320)
+                    Button("Retry") { model.retry() }
+                        .frame(maxWidth: .infinity)
+                } else if model.visibleStations.isEmpty {
+                    ContentUnavailableView(
+                        "No stations in \(country.name)",
+                        systemImage: "radio",
+                        description: Text("Try another country.")
+                    )
+                    .frame(maxWidth: .infinity, minHeight: 320)
+                } else {
+                    StationGrid(
+                        stations: model.visibleStations,
+                        model: model,
+                        artwork: artwork
+                    )
                 }
             }
+            .padding(.horizontal, 24)
+            .padding(.top, 22)
+            .padding(.bottom, model.currentStation == nil ? 28 : 112)
         }
-        .airwaveBrowserList()
+        .scrollIndicators(.automatic)
         .accessibilityLabel("Stations in \(country.name)")
     }
-}
 
-extension View {
-    func airwaveBrowserList() -> some View {
-        listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .contentMargins(.bottom, 92, for: .scrollContent)
+    private func pageHeader(title: String, subtitle: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.largeTitle.bold())
+            Text(subtitle)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
     }
 }

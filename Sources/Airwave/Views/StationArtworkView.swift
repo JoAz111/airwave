@@ -3,15 +3,36 @@ import SwiftUI
 struct StationArtworkView: View {
     let station: Station
     let loader: ArtworkLoader
-    var size: CGFloat = 44
+    var size: CGFloat? = 44
     @State private var image: NSImage?
 
     var body: some View {
         Group {
-            if let image { Image(nsImage: image).resizable().scaledToFill() }
-            else { Image(systemName: "antenna.radiowaves.left.and.right").font(.title3).foregroundStyle(.secondary) }
+            if let size {
+                artwork
+                    .frame(width: size, height: size)
+            } else {
+                artwork
+                    .aspectRatio(1, contentMode: .fit)
+                    .frame(maxWidth: .infinity)
+            }
         }
-        .frame(width: size, height: size).background(.quaternary, in: .rect(cornerRadius: 9)).clipShape(.rect(cornerRadius: 9))
+        .background(.quaternary)
+        .clipShape(.rect(cornerRadius: size == nil ? 14 : 9))
         .task(id: station.id) { image = await loader.image(for: station) }
+    }
+
+    @ViewBuilder
+    private var artwork: some View {
+        if let image {
+            Image(nsImage: image)
+                .resizable()
+                .scaledToFill()
+        } else {
+            Image(systemName: "antenna.radiowaves.left.and.right")
+                .font(size == nil ? .system(size: 34) : .title3)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
     }
 }
