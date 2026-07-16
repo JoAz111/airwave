@@ -10,35 +10,38 @@ struct CountryCard: View {
 
     var body: some View {
         Button(action: action) {
-            ZStack(alignment: .bottomLeading) {
-                flagBackground
-                LinearGradient(
-                    colors: [.clear, .black.opacity(0.12), .black.opacity(0.82)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
+            Color.clear
+                .aspectRatio(1, contentMode: .fit)
+                .overlay {
+                    ZStack(alignment: .bottomLeading) {
+                        flagBackground
+                        LinearGradient(
+                            colors: [.clear, .black.opacity(0.12), .black.opacity(0.82)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
 
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(country.name)
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.82)
-                    Text(stationCount)
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.78))
-                        .lineLimit(1)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(country.name)
+                                .font(.headline)
+                                .foregroundStyle(.white)
+                                .lineLimit(2)
+                                .minimumScaleFactor(0.82)
+                            Text(stationCount)
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.78))
+                                .lineLimit(1)
+                        }
+                        .padding(13)
+                    }
+                    .clipped()
                 }
-                .padding(13)
-            }
-            .aspectRatio(1, contentMode: .fit)
-            .frame(maxWidth: .infinity)
-            .clipShape(.rect(cornerRadius: 18))
-            .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .strokeBorder(.white.opacity(0.18), lineWidth: 1)
-            }
-            .contentShape(.rect(cornerRadius: 18))
+                .clipShape(.rect(cornerRadius: 18))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .strokeBorder(.white.opacity(0.18), lineWidth: 1)
+                }
+                .contentShape(.rect(cornerRadius: 18))
         }
         .buttonStyle(.plain)
         .scaleEffect(isHovering ? 1.02 : 1)
