@@ -1,8 +1,9 @@
 import Foundation
 
 protocol StationSearching: Sendable {
-    func explore() async throws -> [Station]
+    func explore(countryCode: String?) async throws -> [Station]
     func search(_ query: String) async throws -> [Station]
+    func stations(in countryCode: String, matching query: String) async throws -> [Station]
 }
 
 actor StationSearchService: StationSearching {
@@ -10,21 +11,43 @@ actor StationSearchService: StationSearching {
 
     init(directory: any RadioBrowserServing) { self.directory = directory }
 
-    func explore() async throws -> [Station] {
-        StationRanker.group(try await directory.stations(matching: RadioBrowserQuery(
-            field: nil, value: "", limit: 100, order: "clickcount", reverse: true
-        )))
+    func explore(countryCode: String?) async throws -> [Station] {
+        StationRanker.group(try await request(
+            nil,
+            "",
+            countryCode: countryCode,
+            limit: 100,
+            order: "clickcount"
+        ))
     }
 
     func search(_ query: String) async throws -> [Station] {
         let value = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !value.isEmpty else { return try await explore() }
+        guard !value.isEmpty else { return try await explore(countryCode: nil) }
+        return try await fieldSearch(value, countryCode: nil)
+    }
+
+    func stations(in countryCode: String, matching query: String) async throws -> [Station] {
+        let code = countryCode.uppercased()
+        let value = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty else {
+            return StationRanker.group(try await request(
+                nil,
+                "",
+                countryCode: code,
+                limit: 100,
+                order: "clickcount"
+            ))
+        }
+        return try await fieldSearch(value, countryCode: code)
+    }
+
+    private func fieldSearch(_ value: String, countryCode: String?) async throws -> [Station] {
         try Task.checkCancellation()
-        async let names = request(.name, value)
-        async let countries = request(.country, value)
-        async let languages = request(.language, value)
-        async let tags = request(.tag, value)
-        let batches = try await [names, countries, languages, tags]
+        async let names = request(.name, value, countryCode: countryCode)
+        async let languages = request(.language, value, countryCode: countryCode)
+        async let tags = request(.tag, value, countryCode: countryCode)
+        let batches = try await [names, languages, tags]
         try Task.checkCancellation()
         var unique: [UUID: Station] = [:]
         for station in batches.flatMap({ $0 }) where unique[station.id] == nil {
@@ -33,9 +56,20 @@ actor StationSearchService: StationSearching {
         return StationRanker.group(Array(unique.values))
     }
 
-    private func request(_ field: RadioBrowserQuery.Field, _ value: String) async throws -> [Station] {
+    private func request(
+        _ field: RadioBrowserQuery.Field?,
+        _ value: String,
+        countryCode: String?,
+        limit: Int = 30,
+        order: String = "votes"
+    ) async throws -> [Station] {
         try await directory.stations(matching: RadioBrowserQuery(
-            field: field, value: value, limit: 30, order: "votes", reverse: true
+            field: field,
+            value: value,
+            countryCode: countryCode,
+            limit: limit,
+            order: order,
+            reverse: true
         ))
     }
 }

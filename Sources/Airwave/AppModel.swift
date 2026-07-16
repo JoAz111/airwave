@@ -85,7 +85,7 @@ import Observation
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
-        do { stations = query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? try await searchService.explore() : try await searchService.search(query) }
+        do { stations = query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? try await searchService.explore(countryCode: nil) : try await searchService.search(query) }
         catch is CancellationError { return }
         catch { errorMessage = "Couldn’t load stations. Check your connection and try again." }
     }

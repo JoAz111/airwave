@@ -18,8 +18,9 @@ import Testing
 }
 
 private actor SearchFake: StationSearching {
-    func explore() async throws -> [Station] { [] }
+    func explore(countryCode: String?) async throws -> [Station] { [] }
     func search(_ query: String) async throws -> [Station] { [] }
+    func stations(in countryCode: String, matching query: String) async throws -> [Station] { [] }
 }
 
 @MainActor private final class PlayerFake: RadioPlaying {
