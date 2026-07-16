@@ -3,7 +3,6 @@ import SwiftUI
 struct NowPlayingBar: View {
     let model: AppModel
     let artwork: ArtworkLoader
-    let transitionNamespace: Namespace.ID
     let onArtworkTap: () -> Void
     @State private var isArtworkHovering = false
 
@@ -12,10 +11,6 @@ struct NowPlayingBar: View {
             if let station = model.currentStation {
                 Button(action: onArtworkTap) {
                     StationArtworkView(station: station, loader: artwork, size: 46)
-                        .matchedGeometryEffect(
-                            id: "now-playing-artwork",
-                            in: transitionNamespace
-                        )
                         .overlay {
                             if isArtworkHovering {
                                 RoundedRectangle(cornerRadius: 9, style: .continuous)
@@ -32,6 +27,7 @@ struct NowPlayingBar: View {
                 .onHover { isArtworkHovering = $0 }
                 .help("Expand player")
                 .accessibilityLabel("Expand now playing")
+                .accessibilityIdentifier("player.expand")
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(model.currentStation?.name ?? "Choose a station")
@@ -71,7 +67,11 @@ struct NowPlayingBar: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 11)
         .frame(maxWidth: 640)
-        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 26))
+        .glassEffect(
+            .regular.tint(.white.opacity(0.34)).interactive(),
+            in: .rect(cornerRadius: 26)
+        )
+        .shadow(color: .black.opacity(0.08), radius: 18, y: 6)
         .fixedSize(horizontal: false, vertical: true)
     }
 

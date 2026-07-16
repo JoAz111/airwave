@@ -47,16 +47,16 @@ final class AppModel {
         case .countries:
             selectedCountry == nil ? [] : stations
         case .favorites:
-            localFilter(favorites)
+            StationRanker.group(localFilter(favorites))
         case .recent:
-            localFilter(recents)
+            StationRanker.group(localFilter(recents))
         }
     }
 
     var searchPlaceholder: String {
         switch libraryMode {
         case .explore:
-            "Search stations, languages, or genres"
+            "Search radio"
         case .countries where selectedCountry == nil:
             "Search countries"
         case .countries:

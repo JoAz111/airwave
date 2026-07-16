@@ -18,7 +18,7 @@ import Foundation
         if let image = stationCache.object(forKey: cacheKey) { return image }
 
         for url in directIconURLs(for: station) {
-            if let image = await image(for: url) {
+            if let image = await image(for: url), Self.isUsableStationArtwork(image) {
                 stationCache.setObject(image, forKey: cacheKey)
                 return image
             }
@@ -32,7 +32,7 @@ import Foundation
 
         for url in discoveredURLs + fallbackURLs {
             for candidate in secureCandidates(for: url) {
-                if let image = await image(for: candidate) {
+                if let image = await image(for: candidate), Self.isUsableStationArtwork(image) {
                     stationCache.setObject(image, forKey: cacheKey)
                     return image
                 }
@@ -121,6 +121,73 @@ import Foundation
                 relativeTo: baseURL
             )?.absoluteURL
         }
+    }
+
+    nonisolated static func isUsableStationArtwork(_ image: NSImage) -> Bool {
+        guard let data = image.tiffRepresentation,
+              let bitmap = NSBitmapImageRep(data: data) else {
+            return false
+        }
+
+        let width = bitmap.pixelsWide
+        let height = bitmap.pixelsHigh
+        guard min(width, height) >= 96 else { return false }
+
+        let aspectRatio = Double(width) / Double(height)
+        guard (0.60 ... 1.67).contains(aspectRatio) else { return false }
+
+        let sampleSize = 32
+        let cornerPoints = [
+            (0, 0),
+            (width - 1, 0),
+            (0, height - 1),
+            (width - 1, height - 1)
+        ]
+        let corners = cornerPoints.compactMap { bitmap.colorAt(x: $0.0, y: $0.1) }
+        guard !corners.isEmpty else { return false }
+
+        let background = corners.reduce((red: 0.0, green: 0.0, blue: 0.0, alpha: 0.0)) {
+            (
+                $0.red + $1.redComponent,
+                $0.green + $1.greenComponent,
+                $0.blue + $1.blueComponent,
+                $0.alpha + $1.alphaComponent
+            )
+        }
+        let divisor = CGFloat(corners.count)
+        let reference = (
+            red: background.red / divisor,
+            green: background.green / divisor,
+            blue: background.blue / divisor,
+            alpha: background.alpha / divisor
+        )
+
+        var minX = sampleSize
+        var minY = sampleSize
+        var maxX = -1
+        var maxY = -1
+
+        for y in 0 ..< sampleSize {
+            for x in 0 ..< sampleSize {
+                let pixelX = min(width - 1, x * width / sampleSize)
+                let pixelY = min(height - 1, y * height / sampleSize)
+                guard let color = bitmap.colorAt(x: pixelX, y: pixelY) else { continue }
+                let distance = abs(color.redComponent - reference.red)
+                    + abs(color.greenComponent - reference.green)
+                    + abs(color.blueComponent - reference.blue)
+                    + abs(color.alphaComponent - reference.alpha)
+                guard color.alphaComponent > 0.05, distance > 0.18 else { continue }
+                minX = min(minX, x)
+                minY = min(minY, y)
+                maxX = max(maxX, x)
+                maxY = max(maxY, y)
+            }
+        }
+
+        guard maxX >= minX, maxY >= minY else { return false }
+        let contentWidth = Double(maxX - minX + 1) / Double(sampleSize)
+        let contentHeight = Double(maxY - minY + 1) / Double(sampleSize)
+        return contentWidth >= 0.18 && contentHeight >= 0.18
     }
 
     nonisolated private static func attribute(_ name: String, in tag: String) -> String? {

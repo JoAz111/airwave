@@ -1,7 +1,9 @@
+import AppKit
 import Foundation
 import Testing
 @testable import Airwave
 
+@MainActor
 struct ArtworkLoaderTests {
     @Test
     func discoversRelativeHomepageIconsRegardlessOfAttributeOrder() {
@@ -21,5 +23,57 @@ struct ArtworkLoaderTests {
             URL(string: "https://radio.example/images/touch.png")!,
             URL(string: "https://radio.example/shows/icons/favicon.ico")!
         ])
+    }
+
+    @Test
+    func rejectsTinyStationArtwork() {
+        let image = image(size: NSSize(width: 32, height: 32)) {
+            NSColor.systemRed.setFill()
+            NSRect(x: 0, y: 0, width: 32, height: 32).fill()
+        }
+
+        #expect(!ArtworkLoader.isUsableStationArtwork(image))
+    }
+
+    @Test
+    func rejectsExtremeAspectRatioArtwork() {
+        let image = image(size: NSSize(width: 320, height: 40)) {
+            NSColor.systemBlue.setFill()
+            NSRect(x: 0, y: 0, width: 320, height: 40).fill()
+        }
+
+        #expect(!ArtworkLoader.isUsableStationArtwork(image))
+    }
+
+    @Test
+    func rejectsNarrowMalformedArtwork() {
+        let image = image(size: NSSize(width: 256, height: 256)) {
+            NSColor.black.setFill()
+            NSRect(x: 118, y: 0, width: 20, height: 256).fill()
+        }
+
+        #expect(!ArtworkLoader.isUsableStationArtwork(image))
+    }
+
+    @Test
+    func acceptsSubstantialSquareArtwork() {
+        let image = image(size: NSSize(width: 256, height: 256)) {
+            NSColor.white.setFill()
+            NSRect(x: 0, y: 0, width: 256, height: 256).fill()
+            NSColor.systemBlue.setFill()
+            NSBezierPath(ovalIn: NSRect(x: 38, y: 38, width: 180, height: 180)).fill()
+        }
+
+        #expect(ArtworkLoader.isUsableStationArtwork(image))
+    }
+
+    private func image(size: NSSize, drawing: () -> Void) -> NSImage {
+        let image = NSImage(size: size)
+        image.lockFocus()
+        NSColor.clear.setFill()
+        NSRect(origin: .zero, size: size).fill(using: .copy)
+        drawing()
+        image.unlockFocus()
+        return image
     }
 }

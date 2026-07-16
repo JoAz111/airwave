@@ -1,12 +1,6 @@
 import Foundation
 
 enum StationRanker {
-    private struct GroupKey: Hashable {
-        let name: String
-        let countryCode: String
-        let homepageHost: String
-    }
-
     static func rank(_ stations: [Station]) -> [Station] {
         stations
             .map { station in
@@ -36,45 +30,9 @@ enum StationRanker {
     }
 
     static func group(_ stations: [Station]) -> [Station] {
-        var grouped: [GroupKey: Station] = [:]
-        var ungrouped: [Station] = []
-
-        for station in stations {
-            guard
-                let countryCode = station.countryCode?.lowercased(),
-                let homepageURL = station.homepageURL,
-                let homepageHost = URLComponents(
-                    url: homepageURL,
-                    resolvingAgainstBaseURL: false
-                )?.host?.lowercased()
-            else {
-                ungrouped.append(station)
-                continue
-            }
-
-            let key = GroupKey(
-                name: station.name.folding(
-                    options: [.caseInsensitive, .diacriticInsensitive],
-                    locale: .current
-                ),
-                countryCode: countryCode,
-                homepageHost: homepageHost
-            )
-
-            if var existing = grouped[key] {
-                existing.sources = sortedSources(
-                    Array(Set(existing.sources + station.sources))
-                )
-                existing.votes = max(existing.votes, station.votes)
-                grouped[key] = existing
-            } else {
-                var copy = station
-                copy.sources = sortedSources(copy.sources)
-                grouped[key] = copy
-            }
-        }
-
-        return rank(Array(grouped.values) + ungrouped)
+        let streamDeduplicated = merge(stations, keyedBy: streamKey)
+        let nameDeduplicated = merge(streamDeduplicated, keyedBy: nameKey)
+        return rank(nameDeduplicated)
     }
 
     static func plausibleBitrate(_ value: Int?) -> Int? {
@@ -82,6 +40,105 @@ enum StationRanker {
             return nil
         }
         return value
+    }
+
+    private static func merge(
+        _ stations: [Station],
+        keyedBy keyForStation: (Station) -> String?
+    ) -> [Station] {
+        var indexByKey: [String: Int] = [:]
+        var result: [Station] = []
+
+        for station in stations {
+            guard let key = keyForStation(station) else {
+                result.append(station)
+                continue
+            }
+
+            if let index = indexByKey[key] {
+                result[index] = merged(result[index], station)
+            } else {
+                indexByKey[key] = result.count
+                result.append(station)
+            }
+        }
+
+        return result
+    }
+
+    private static func merged(_ lhs: Station, _ rhs: Station) -> Station {
+        var preferred = qualityScore(rhs) > qualityScore(lhs) ? rhs : lhs
+        preferred.sources = sortedSources(Array(Set(lhs.sources + rhs.sources)))
+        preferred.votes = max(lhs.votes, rhs.votes)
+        return preferred
+    }
+
+    private static func qualityScore(_ station: Station) -> Int {
+        let artwork = station.faviconURL == nil ? 0 : 1_000_000
+        let homepage = station.homepageURL == nil ? 0 : 500_000
+        let bitrate = (plausibleBitrate(station.primarySource?.bitrate) ?? 0) * 1_000
+        return artwork + homepage + bitrate + min(max(station.votes, 0), 100_000)
+    }
+
+    private static func streamKey(_ station: Station) -> String? {
+        guard let source = station.sources.first,
+              var components = URLComponents(
+                  url: source.url,
+                  resolvingAgainstBaseURL: false
+              ),
+              let host = components.host?.lowercased() else {
+            return nil
+        }
+        components.scheme = nil
+        components.host = nil
+        components.user = nil
+        components.password = nil
+        components.query = nil
+        components.fragment = nil
+        let port = components.port.map { ":\($0)" } ?? ""
+        let path = components.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        return "\(host)\(port)/\(path.lowercased())"
+    }
+
+    private static func nameKey(_ station: Station) -> String? {
+        let name = normalizedName(station.name)
+        guard !name.isEmpty else { return nil }
+        let country = station.countryCode?.lowercased()
+            ?? station.country?.folding(
+                options: [.caseInsensitive, .diacriticInsensitive],
+                locale: .current
+            ).lowercased()
+            ?? ""
+        return "\(country)|\(name)"
+    }
+
+    private static func normalizedName(_ value: String) -> String {
+        let folded = value.folding(
+            options: [.caseInsensitive, .diacriticInsensitive],
+            locale: .current
+        ).lowercased()
+        let frequencyPattern = #"\b(?:7\d|8\d|9\d|10\d|110)[.,]\d+\s*(?:fm)?\b|\b(?:7\d|8\d|9\d|10\d|110)\s*fm\b"#
+        let withoutFrequencies = folded.replacingOccurrences(
+            of: frequencyPattern,
+            with: " ",
+            options: .regularExpression
+        )
+        let separated = String(withoutFrequencies.unicodeScalars.map {
+            CharacterSet.alphanumerics.contains($0) ? Character(String($0)) : " "
+        })
+        let ignored = Set(["fm", "live", "online", "stream"])
+        return separated
+            .split(whereSeparator: \.isWhitespace)
+            .map(String.init)
+            .filter { !ignored.contains($0) && !isFrequency($0) }
+            .joined(separator: " ")
+    }
+
+    private static func isFrequency(_ token: String) -> Bool {
+        guard token.hasSuffix("fm") else { return false }
+        let number = String(token.dropLast(2))
+        guard let value = Double(number) else { return false }
+        return (70 ... 110.9).contains(value)
     }
 
     private static func sortedSources(_ sources: [StationSource]) -> [StationSource] {

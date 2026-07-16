@@ -4,39 +4,25 @@ struct ExpandedPlayerView: View {
     let station: Station
     let model: AppModel
     let artwork: ArtworkLoader
-    let transitionNamespace: Namespace.ID
     let onDismiss: () -> Void
 
     @State private var backgroundImage: NSImage?
 
     var body: some View {
-        GeometryReader { geometry in
-            ZStack {
-                backdrop
+        ZStack {
+            backdrop
 
-                VStack(spacing: 0) {
-                    topControls
-                    Spacer(minLength: 12)
-
-                    StationArtworkView(
-                        station: station,
-                        loader: artwork,
-                        size: artworkSize(for: geometry.size)
-                    )
-                    .matchedGeometryEffect(
-                        id: "now-playing-artwork",
-                        in: transitionNamespace
-                    )
-                    .shadow(color: .black.opacity(0.22), radius: 28, y: 14)
-
-                    playerDetails
-                        .frame(maxWidth: 500)
-                        .padding(.top, 24)
-
-                    Spacer(minLength: 16)
-                }
-                .padding(24)
-            }
+            playerContent
+                .frame(maxWidth: 500)
+                .padding(.horizontal, 56)
+                .padding(.vertical, 28)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(alignment: .topLeading) {
+            closeButton.padding(22)
+        }
+        .overlay(alignment: .topTrailing) {
+            volumeControl.padding(22)
         }
         .foregroundStyle(.black)
         .tint(.black)
@@ -53,48 +39,25 @@ struct ExpandedPlayerView: View {
                 Image(nsImage: backgroundImage)
                     .resizable()
                     .scaledToFill()
-                    .scaleEffect(1.22)
-                    .blur(radius: 58)
+                    .scaleEffect(1.18)
+                    .blur(radius: 54)
             } else {
                 Color(nsColor: .underPageBackgroundColor)
             }
 
-            Color.white.opacity(0.48)
+            Color.white.opacity(0.50)
         }
-        .ignoresSafeArea()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipped()
     }
 
-    private var topControls: some View {
-        HStack {
-            Button(action: onDismiss) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 16, weight: .bold))
-                    .frame(width: 20, height: 20)
-            }
-            .buttonStyle(.glass)
-            .buttonBorderShape(.circle)
-            .tint(.black)
-            .help("Close player")
-            .keyboardShortcut(.cancelAction)
+    private var playerContent: some View {
+        VStack(spacing: 20) {
+            Spacer(minLength: 44)
 
-            Spacer()
+            StationArtworkView(station: station, loader: artwork, size: 240)
+                .shadow(color: .black.opacity(0.20), radius: 24, y: 12)
 
-            HStack(spacing: 9) {
-                Image(systemName: "speaker.fill")
-                    .font(.caption)
-                PlayerVolumeSlider(model: model)
-                Image(systemName: "speaker.wave.3.fill")
-                    .font(.caption)
-            }
-            .padding(.horizontal, 13)
-            .padding(.vertical, 9)
-            .glassEffect(.regular.interactive(), in: .capsule)
-        }
-    }
-
-    private var playerDetails: some View {
-        VStack(spacing: 18) {
             HStack(alignment: .center, spacing: 14) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(primaryTitle)
@@ -121,34 +84,61 @@ struct ExpandedPlayerView: View {
 
             HStack(spacing: 12) {
                 Capsule().fill(.black.opacity(0.16)).frame(height: 5)
-                Text("LIVE")
-                    .font(.caption.bold())
+                Text("LIVE").font(.caption.bold())
                 Capsule().fill(.black.opacity(0.16)).frame(height: 5)
             }
 
-            Button { model.togglePlayback() } label: {
-                ZStack {
-                    Image(systemName: model.playbackState == .playing ? "pause.fill" : "play.fill")
-                        .opacity(isBuffering ? 0 : 1)
-                    if isBuffering {
-                        ProgressView()
-                            .controlSize(.small)
-                            .tint(.white)
-                    }
-                }
-                .font(.system(size: 22, weight: .bold))
-                .foregroundStyle(.white)
-                .frame(width: 34, height: 34)
-            }
-            .buttonStyle(.glassProminent)
-            .buttonBorderShape(.circle)
-            .tint(.black)
-            .help(model.playbackState == .playing ? "Pause" : "Play")
+            playButton
+            Spacer(minLength: 4)
         }
     }
 
-    private func artworkSize(for size: CGSize) -> CGFloat {
-        min(300, max(210, size.height * 0.42), size.width * 0.54)
+    private var closeButton: some View {
+        Button(action: onDismiss) {
+            Image(systemName: "xmark")
+                .font(.system(size: 16, weight: .bold))
+                .frame(width: 20, height: 20)
+        }
+        .buttonStyle(.glassProminent)
+        .buttonBorderShape(.circle)
+        .tint(.black)
+        .help("Close player")
+        .keyboardShortcut(.cancelAction)
+    }
+
+    private var volumeControl: some View {
+        HStack(spacing: 9) {
+            Image(systemName: "speaker.fill").font(.caption)
+            PlayerVolumeSlider(model: model)
+            Image(systemName: "speaker.wave.3.fill").font(.caption)
+        }
+        .padding(.horizontal, 13)
+        .padding(.vertical, 9)
+        .glassEffect(
+            .regular.tint(.white.opacity(0.24)).interactive(),
+            in: .capsule
+        )
+    }
+
+    private var playButton: some View {
+        Button { model.togglePlayback() } label: {
+            ZStack {
+                Image(systemName: model.playbackState == .playing ? "pause.fill" : "play.fill")
+                    .opacity(isBuffering ? 0 : 1)
+                if isBuffering {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(.white)
+                }
+            }
+            .font(.system(size: 22, weight: .bold))
+            .foregroundStyle(.white)
+            .frame(width: 34, height: 34)
+        }
+        .buttonStyle(.glassProminent)
+        .buttonBorderShape(.circle)
+        .tint(.black)
+        .help(model.playbackState == .playing ? "Pause" : "Play")
     }
 
     private var primaryTitle: String {

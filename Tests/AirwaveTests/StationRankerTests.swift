@@ -31,11 +31,35 @@ struct StationRankerTests {
     }
 
     @Test
-    func leavesStationSeparateWithoutHomepageHost() {
+    func groupsMatchingStationsWithoutHomepageHost() {
         let first = station(name: "Radio One", homepageURL: nil)
         let second = station(name: "Radio One", homepageURL: nil)
 
-        #expect(StationRanker.group([first, second]).count == 2)
+        #expect(StationRanker.group([first, second]).count == 1)
+    }
+
+    @Test
+    func groupsFrequencyAndLiveNameVariants() {
+        let branded = station(name: "Galgalatz 91.8 FM", url: "https://one.example/live")
+        let plain = station(name: "Galgalatz Live", url: "https://two.example/live")
+
+        #expect(StationRanker.group([branded, plain]).count == 1)
+    }
+
+    @Test
+    func groupsDifferentNamesSharingTheSameStream() {
+        let english = station(name: "Capital FM", url: "https://stream.example/live?token=one")
+        let localized = station(name: "Capital Radio", url: "https://stream.example/live?token=two")
+
+        #expect(StationRanker.group([english, localized]).count == 1)
+    }
+
+    @Test
+    func keepsThemedChannelsSeparate() {
+        let nineties = station(name: "Radios 100FM - 90s", url: "https://one.example/live")
+        let topForty = station(name: "Radios 100FM - Top 40", url: "https://two.example/live")
+
+        #expect(StationRanker.group([nineties, topForty]).count == 2)
     }
 
     private func station(

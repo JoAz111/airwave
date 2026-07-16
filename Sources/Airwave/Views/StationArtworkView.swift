@@ -27,12 +27,18 @@ struct StationArtworkView: View {
         if let image {
             Image(nsImage: image)
                 .resizable()
-                .scaledToFill()
+                .scaledToFit()
+                .padding(artworkPadding)
         } else {
             Image(systemName: "antenna.radiowaves.left.and.right")
                 .font(size == nil ? .system(size: 34) : .title3)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+    }
+
+    private var artworkPadding: CGFloat {
+        guard let size else { return 12 }
+        return size >= 100 ? 16 : 3
     }
 }

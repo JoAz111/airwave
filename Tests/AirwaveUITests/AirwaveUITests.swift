@@ -32,21 +32,20 @@ struct AirwaveUITests {
     }
 
     @Test
-    func nativeLibrarySelectorActivatesCountries() async throws {
+    func glassLibrarySelectorUsesBlackSelectionInCompactWidth() throws {
         let model = makeModel()
-        let hostingView = host(
+        let size = NSSize(width: 300, height: 36)
+        let bitmap = render(
             LibraryTabBar(model: model),
-            size: NSSize(width: 366, height: 44)
+            size: size
         )
-        let selector = try #require(
-            descendant(of: NSSegmentedControl.self, in: hostingView)
+        let selectedColor = try #require(
+            color(at: NSPoint(x: 12, y: 18), in: bitmap, size: size)
         )
 
-        selector.selectedSegment = 1
-        selector.sendAction(selector.action, to: selector.target)
-        try await Task.sleep(for: .milliseconds(50))
-
-        #expect(model.libraryMode == .countries)
+        #expect(selectedColor.redComponent < 0.3)
+        #expect(selectedColor.greenComponent < 0.3)
+        #expect(selectedColor.blueComponent < 0.3)
     }
 
     private func country(code: String, name: String) -> Country {
@@ -74,14 +73,6 @@ struct AirwaveUITests {
         hostingView.frame = NSRect(origin: .zero, size: size)
         hostingView.layoutSubtreeIfNeeded()
         return hostingView
-    }
-
-    private func descendant<T: NSView>(of type: T.Type, in view: NSView) -> T? {
-        if let match = view as? T { return match }
-        for subview in view.subviews {
-            if let match = descendant(of: type, in: subview) { return match }
-        }
-        return nil
     }
 
     private func color(
