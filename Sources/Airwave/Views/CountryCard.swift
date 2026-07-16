@@ -10,38 +10,7 @@ struct CountryCard: View {
 
     var body: some View {
         Button(action: action) {
-            Color.clear
-                .aspectRatio(1, contentMode: .fit)
-                .overlay {
-                    ZStack(alignment: .bottomLeading) {
-                        flagBackground
-                        LinearGradient(
-                            colors: [.clear, .black.opacity(0.12), .black.opacity(0.82)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(country.name)
-                                .font(.headline)
-                                .foregroundStyle(.white)
-                                .lineLimit(2)
-                                .minimumScaleFactor(0.82)
-                            Text(stationCount)
-                                .font(.caption)
-                                .foregroundStyle(.white.opacity(0.78))
-                                .lineLimit(1)
-                        }
-                        .padding(13)
-                    }
-                    .clipped()
-                }
-                .clipShape(.rect(cornerRadius: 18))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .strokeBorder(.white.opacity(0.18), lineWidth: 1)
-                }
-                .contentShape(.rect(cornerRadius: 18))
+            CountryFlagCardContent(country: country, flagImage: flagImage)
         }
         .buttonStyle(.plain)
         .scaleEffect(isHovering ? 1.02 : 1)
@@ -56,7 +25,56 @@ struct CountryCard: View {
             flagImage = await artwork.image(for: flagURL)
         }
         .accessibilityLabel(country.name)
-        .accessibilityValue(stationCount)
+        .accessibilityValue(
+            country.stationCount > 0
+                ? "\(country.stationCount.formatted()) stations"
+                : "Radio directory"
+        )
+    }
+
+    private var flagURL: URL? {
+        URL(string: "https://flagcdn.com/w320/\(country.code.lowercased()).png")
+    }
+}
+
+struct CountryFlagCardContent: View {
+    let country: Country
+    let flagImage: NSImage?
+
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack(alignment: .bottomLeading) {
+                flagBackground
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.12), .black.opacity(0.82)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(country.name)
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.82)
+                    Text(stationCount)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.78))
+                        .lineLimit(1)
+                }
+                .padding(13)
+            }
+            .frame(width: geometry.size.width, height: geometry.size.height)
+            .clipped()
+        }
+        .aspectRatio(1, contentMode: .fit)
+        .clipShape(.rect(cornerRadius: 18))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(.white.opacity(0.18), lineWidth: 1)
+        }
+        .contentShape(.rect(cornerRadius: 18))
     }
 
     @ViewBuilder
@@ -73,10 +91,6 @@ struct CountryCard: View {
                         .controlSize(.small)
                 }
         }
-    }
-
-    private var flagURL: URL? {
-        URL(string: "https://flagcdn.com/w320/\(country.code.lowercased()).png")
     }
 
     private var stationCount: String {

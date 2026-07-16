@@ -10,6 +10,7 @@ let package = Package(
     ],
     targets: [
         .executableTarget(name: "Airwave"),
-        .testTarget(name: "AirwaveTests", dependencies: ["Airwave"])
+        .testTarget(name: "AirwaveTests", dependencies: ["Airwave"]),
+        .testTarget(name: "AirwaveUITests", dependencies: ["Airwave"])
     ]
 )
