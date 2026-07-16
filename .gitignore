@@ -1,0 +1,25 @@
+# Codex and agent working files
+.superpowers/
+.codex/
+.agents/
+docs/superpowers/
+
+# macOS
+.DS_Store
+
+# Xcode user state and build output
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.xccheckout
+*.xcscmblueprint
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# Local configuration
+*.local
+.env
+.env.*
