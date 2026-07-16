@@ -3,6 +3,9 @@ import SwiftUI
 struct CountryBrowserView: View {
     let model: AppModel
     let artwork: ArtworkLoader
+    private let columns = [
+        GridItem(.adaptive(minimum: 118, maximum: 154), spacing: 12)
+    ]
 
     var body: some View {
         if let selectedCountry = model.selectedCountry {
@@ -17,48 +20,19 @@ struct CountryBrowserView: View {
     }
 
     private var countryList: some View {
-        List {
-            FloatingHeaderSpacer()
-            ForEach(
-                Array(model.visibleCountries.enumerated()),
-                id: \.element.id
-            ) { index, country in
-                if index == 1, model.visibleCountries.first?.isLocal == true {
-                    Divider()
-                }
-                Button {
-                    Task { await model.selectCountry(country) }
-                } label: {
-                    HStack(spacing: 12) {
-                        Text(country.flag)
-                            .font(.title2)
-                            .accessibilityHidden(true)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(country.name)
-                                .fontWeight(country.isLocal ? .semibold : .regular)
-                            if country.isLocal {
-                                Text("Mac Region")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        Spacer()
-                        if country.stationCount > 0 {
-                            Text(country.stationCount.formatted())
-                                .foregroundStyle(.secondary)
-                        }
-                        Image(systemName: "chevron.right")
-                            .foregroundStyle(.tertiary)
-                            .accessibilityHidden(true)
+        ScrollView {
+            LazyVGrid(columns: columns, spacing: 12) {
+                ForEach(model.visibleCountries) { country in
+                    CountryCard(country: country) {
+                        Task { await model.selectCountry(country) }
                     }
-                    .contentShape(.rect)
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel(country.name)
-                .accessibilityValue(country.isLocal ? "Mac Region" : "")
             }
+            .padding(.horizontal, 12)
+            .padding(.top, 126)
+            .padding(.bottom, 104)
         }
-        .airwaveBrowserList()
+        .scrollIndicators(.automatic)
         .overlay {
             if model.visibleCountries.isEmpty {
                 ContentUnavailableView.search(text: model.query)
