@@ -59,6 +59,28 @@ struct AppModelTests {
     }
 
     @Test
+    func stoppingRadioAndPlayingAgainReloadsTheLiveStream() {
+        let player = PlayerFake()
+        let model = AppModel(
+            search: SearchFake(),
+            countries: CountryFake(values: []),
+            player: player,
+            preferences: PreferencesFake(value: AirwavePreferences())
+        )
+
+        model.select(Self.station)
+        model.togglePlayback()
+
+        #expect(player.stopCount == 1)
+        #expect(model.playbackState == .idle)
+
+        model.togglePlayback()
+
+        #expect(player.loaded == [Self.station, Self.station])
+        #expect(model.playbackState == .playing)
+    }
+
+    @Test
     func countriesTabPinsLocaleAndSearchesCountriesLocally() async {
         let values = [
             Country(code: "IL", name: "Israel", stationCount: 4, isLocal: true),
@@ -196,11 +218,18 @@ private final class PlayerFake: RadioPlaying {
     var onStateChange: ((PlaybackState) -> Void)?
     var onMetadataChange: ((NowPlayingMetadata?) -> Void)?
     var loaded: [Station] = []
+    var stopCount = 0
 
-    func load(_ station: Station) { loaded.append(station) }
-    func play() {}
-    func pause() {}
-    func stop() {}
+    func load(_ station: Station) {
+        loaded.append(station)
+        state = .playing
+        onStateChange?(.playing)
+    }
+    func stop() {
+        stopCount += 1
+        state = .idle
+        onStateChange?(.idle)
+    }
 }
 
 @MainActor

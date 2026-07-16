@@ -68,6 +68,15 @@ final class AppModel {
         }
     }
 
+    var isPlaybackActive: Bool {
+        switch playbackState {
+        case .loading, .playing, .waiting:
+            true
+        case .idle, .paused, .failed:
+            false
+        }
+    }
+
     init(
         search: any StationSearching,
         countries: any CountryLoading,
@@ -180,7 +189,12 @@ final class AppModel {
     }
 
     func togglePlayback() {
-        playbackState == .playing ? player.pause() : player.play()
+        if isPlaybackActive {
+            player.stop()
+        } else if let currentStation {
+            metadata = nil
+            player.load(currentStation)
+        }
     }
 
     private func localFilter(_ values: [Station]) -> [Station] {

@@ -41,7 +41,7 @@ struct NowPlayingBar: View {
             Spacer(minLength: 8)
             Button { model.togglePlayback() } label: {
                 ZStack {
-                    Image(systemName: model.playbackState == .playing ? "pause.fill" : "play.fill")
+                    Image(systemName: model.isPlaybackActive ? "stop.fill" : "play.fill")
                         .opacity(isBuffering ? 0 : 1)
                     if isBuffering {
                         ProgressView().controlSize(.small)
@@ -54,8 +54,8 @@ struct NowPlayingBar: View {
             .buttonBorderShape(.circle)
             .tint(.black)
             .disabled(model.currentStation == nil)
-            .help("Play or pause")
-            .accessibilityLabel(model.playbackState == .playing ? "Pause" : "Play")
+            .help(model.isPlaybackActive ? "Stop" : "Play live")
+            .accessibilityLabel(model.isPlaybackActive ? "Stop" : "Play live")
 
             Divider().frame(height: 24)
             Image(systemName: "speaker.fill")
@@ -84,7 +84,7 @@ struct NowPlayingBar: View {
         case .loading, .waiting: "Buffering…"
         case .playing: "Playing live"
         case .failed(let text): text
-        default: "Live broadcast"
+        case .idle, .paused: "Stopped"
         }
     }
 }

@@ -35,17 +35,18 @@ struct ExpandedPlayerView: View {
 
     private var backdrop: some View {
         ZStack {
+            Color.white
+
             if let backgroundImage {
                 Image(nsImage: backgroundImage)
                     .resizable()
                     .scaledToFill()
                     .scaleEffect(1.18)
-                    .blur(radius: 54)
-            } else {
-                Color(nsColor: .underPageBackgroundColor)
+                    .blur(radius: 72)
+                    .opacity(0.16)
             }
 
-            Color.white.opacity(0.50)
+            Color.white.opacity(0.28)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipped()
@@ -55,8 +56,8 @@ struct ExpandedPlayerView: View {
         VStack(spacing: 20) {
             Spacer(minLength: 44)
 
-            StationArtworkView(station: station, loader: artwork, size: 240)
-                .shadow(color: .black.opacity(0.20), radius: 24, y: 12)
+            StationArtworkView(station: station, loader: artwork, size: 210)
+                .shadow(color: .black.opacity(0.14), radius: 20, y: 10)
 
             HStack(alignment: .center, spacing: 14) {
                 VStack(alignment: .leading, spacing: 3) {
@@ -123,7 +124,7 @@ struct ExpandedPlayerView: View {
     private var playButton: some View {
         Button { model.togglePlayback() } label: {
             ZStack {
-                Image(systemName: model.playbackState == .playing ? "pause.fill" : "play.fill")
+                Image(systemName: model.isPlaybackActive ? "stop.fill" : "play.fill")
                     .opacity(isBuffering ? 0 : 1)
                 if isBuffering {
                     ProgressView()
@@ -138,7 +139,7 @@ struct ExpandedPlayerView: View {
         .buttonStyle(.glassProminent)
         .buttonBorderShape(.circle)
         .tint(.black)
-        .help(model.playbackState == .playing ? "Pause" : "Play")
+        .help(model.isPlaybackActive ? "Stop" : "Play live")
     }
 
     private var primaryTitle: String {

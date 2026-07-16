@@ -19,8 +19,6 @@ struct SourceQueue {
     var onStateChange: ((PlaybackState) -> Void)? { get set }
     var onMetadataChange: ((NowPlayingMetadata?) -> Void)? { get set }
     func load(_ station: Station)
-    func play()
-    func pause()
     func stop()
 }
 
@@ -64,12 +62,11 @@ struct SourceQueue {
         loadNextSource()
     }
 
-    func play() { player.play() }
-    func pause() { player.pause() }
     func stop() {
+        state = .idle
         player.pause()
         player.replaceCurrentItem(with: nil)
-        state = .idle
+        sourceQueue = SourceQueue(sources: [])
         metadata = nil
     }
 

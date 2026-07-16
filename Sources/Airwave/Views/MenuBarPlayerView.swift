@@ -8,16 +8,17 @@ struct MenuBarPlayerView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             if let station = model.currentStation {
-                HStack { StationArtworkView(station: station, loader: artwork, size: 52); VStack(alignment: .leading) { Text(station.name).fontWeight(.semibold); Text(model.metadata?.displayText ?? "Live broadcast").foregroundStyle(.secondary).lineLimit(2) } }
+                HStack { StationArtworkView(station: station, loader: artwork, size: 52); VStack(alignment: .leading) { Text(station.name).fontWeight(.semibold); Text(model.metadata?.displayText ?? (model.isPlaybackActive ? "Playing live" : "Stopped")).foregroundStyle(.secondary).lineLimit(2) } }
             } else { Label("Choose a station", systemImage: "antenna.radiowaves.left.and.right") }
             HStack {
                 Button { model.togglePlayback() } label: {
-                    Image(systemName: model.playbackState == .playing ? "pause.fill" : "play.fill")
+                    Image(systemName: model.isPlaybackActive ? "stop.fill" : "play.fill")
                         .font(.system(size: 15, weight: .bold))
                         .frame(width: 32, height: 32)
                 }
                 .buttonStyle(.plain)
                 .disabled(model.currentStation == nil)
+                .help(model.isPlaybackActive ? "Stop" : "Play live")
                 Slider(value: Binding(get: { Double(model.volume) }, set: { model.volume = Float($0) }), in: 0 ... 1)
             }
             Divider()
