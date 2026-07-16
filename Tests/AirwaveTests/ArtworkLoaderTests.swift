@@ -110,6 +110,14 @@ struct ArtworkLoaderTests {
         #expect(maximum == 2)
     }
 
+    @Test
+    func stationArtworkPixelBudgetMatchesItsPresentationSize() {
+        #expect(ArtworkPixelBudget.station(pointSize: nil) == 320)
+        #expect(ArtworkPixelBudget.station(pointSize: 46) == 96)
+        #expect(ArtworkPixelBudget.station(pointSize: 52) == 104)
+        #expect(ArtworkPixelBudget.station(pointSize: 210) == 512)
+    }
+
     private func image(size: NSSize, drawing: () -> Void) -> NSImage {
         let image = NSImage(size: size)
         image.lockFocus()

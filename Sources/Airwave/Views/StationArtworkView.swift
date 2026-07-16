@@ -19,7 +19,13 @@ struct StationArtworkView: View {
         }
         .background(.quaternary)
         .clipShape(.rect(cornerRadius: size == nil ? 14 : 9))
-        .task(id: station.id) { image = await loader.image(for: station) }
+        .task(id: station.id) {
+            image = await loader.image(
+                for: station,
+                maxPixelSize: ArtworkPixelBudget.station(pointSize: size)
+            )
+        }
+        .onDisappear { image = nil }
     }
 
     @ViewBuilder

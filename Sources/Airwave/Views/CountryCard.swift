@@ -17,8 +17,12 @@ struct CountryCard: View {
         .animation(.smooth(duration: 0.18), value: isHovering)
         .onHover { isHovering = $0 }
         .task(id: country.code) {
-            flagImage = await artwork.image(for: flagURL)
+            flagImage = await artwork.image(
+                for: flagURL,
+                maxPixelSize: ArtworkPixelBudget.countryFlag
+            )
         }
+        .onDisappear { flagImage = nil }
         .accessibilityLabel(country.name)
         .accessibilityValue(
             country.stationCount > 0

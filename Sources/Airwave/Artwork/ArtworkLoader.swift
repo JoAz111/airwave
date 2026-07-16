@@ -13,6 +13,16 @@ struct DecodedArtwork {
     var cost: Int { bytesPerRow * pixelHeight }
 }
 
+enum ArtworkPixelBudget {
+    static func station(pointSize: CGFloat?) -> Int {
+        guard let pointSize else { return 320 }
+        if pointSize >= 180 { return 512 }
+        return max(96, min(256, Int(ceil(pointSize * 2))))
+    }
+
+    static let countryFlag = 320
+}
+
 actor ArtworkRequestLimiter {
     private let limit: Int
     private var available: Int
