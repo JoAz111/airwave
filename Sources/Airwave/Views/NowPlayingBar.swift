@@ -43,12 +43,12 @@ struct NowPlayingBar: View {
                     ),
                     in: 0 ... 1
                 )
-                .frame(width: 72)
+                .frame(width: 88)
                 .accessibilityLabel("Volume")
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
-            .glassEffect(.regular.interactive(), in: .capsule)
+            .glassEffect(.regular, in: .capsule)
         }
     }
 

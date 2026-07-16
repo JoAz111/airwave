@@ -46,7 +46,7 @@ The main window is a compact station browser with four simple views:
 - **Favorites** for stations you want to keep
 - **Recent** for getting back to something quickly
 
-The station list continues behind floating Liquid Glass search and playback controls. The now-playing capsule stays visible at the bottom and shows the station's live song or program metadata when available. A small branded menu-bar controller shows the active station, current metadata, play/pause, volume, and a button to reopen Airwave.
+The app uses an opaque system-adaptive canvas with Liquid Glass reserved for the search, animated section selector, and floating playback controls. The now-playing capsule stays visible at the bottom and shows the station's live song or program metadata when available. A small branded menu-bar controller shows the active station, current metadata, play/pause, volume, and a button to reopen Airwave.
 
 ## Radio directory
 

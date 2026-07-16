@@ -113,7 +113,6 @@ extension View {
     func airwaveBrowserList() -> some View {
         listStyle(.plain)
             .scrollContentBackground(.hidden)
-            .contentMargins(.top, 112, for: .scrollContent)
-            .contentMargins(.bottom, 86, for: .scrollContent)
+            .contentMargins(.bottom, 92, for: .scrollContent)
     }
 }
