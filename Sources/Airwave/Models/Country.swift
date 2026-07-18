@@ -1,10 +1,12 @@
 import Foundation
 
+/// The raw country count returned by the radio directory.
 struct CountryDirectoryEntry: Equatable, Sendable {
     let code: String
     let stationCount: Int
 }
 
+/// A localized country presented in the country browser.
 struct Country: Equatable, Identifiable, Sendable {
     let code: String
     let name: String
@@ -13,6 +15,7 @@ struct Country: Equatable, Identifiable, Sendable {
 
     var id: String { code }
 
+    /// Returns the Unicode regional-indicator flag used only as an accessibility fallback.
     var flag: String {
         code.uppercased().unicodeScalars
             .compactMap { UnicodeScalar(127_397 + $0.value) }
@@ -22,6 +25,7 @@ struct Country: Equatable, Identifiable, Sendable {
 }
 
 enum CountryCatalog {
+    /// Localizes, validates, sorts, and locale-pins directory country entries.
     static func make(
         entries: [CountryDirectoryEntry],
         locale: Locale,
@@ -69,6 +73,7 @@ enum CountryCatalog {
         return result
     }
 
+    /// Supplies Foundation regions if the remote directory is temporarily unavailable.
     static func fallback(locale: Locale, localCode: String?) -> [Country] {
         make(
             entries: Locale.Region.isoRegions
@@ -80,6 +85,7 @@ enum CountryCatalog {
         )
     }
 
+    /// Filters localized country names and ISO codes without a remote request.
     static func filter(_ countries: [Country], query: String) -> [Country] {
         let value = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !value.isEmpty else { return countries }

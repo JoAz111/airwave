@@ -1,5 +1,6 @@
 import Foundation
 
+/// One playable stream endpoint for a directory station.
 struct StationSource: Codable, Hashable, Sendable {
     let url: URL
     let codec: String?
@@ -7,6 +8,7 @@ struct StationSource: Codable, Hashable, Sendable {
     let isHLS: Bool
 }
 
+/// A directory station with metadata and quality-ordered stream fallbacks.
 struct Station: Codable, Hashable, Identifiable, Sendable {
     let id: UUID
     let name: String
@@ -18,6 +20,7 @@ struct Station: Codable, Hashable, Identifiable, Sendable {
     var sources: [StationSource]
     var votes: Int
 
+    /// The highest-quality source selected by station ranking.
     var primarySource: StationSource? {
         sources.first
     }
@@ -32,6 +35,7 @@ enum PlaybackState: Equatable, Sendable {
     case failed(String)
 }
 
+/// Display-ready metadata supplied by a live radio stream when available.
 struct NowPlayingMetadata: Codable, Equatable, Sendable {
     let title: String?
     let artist: String?

@@ -2,9 +2,12 @@ import AVFoundation
 import Foundation
 import OSLog
 
+/// A one-pass queue of stream fallbacks for the station currently being loaded.
 struct SourceQueue {
     private var remaining: ArraySlice<StationSource>
+    /// Creates a queue in the quality order supplied by the station ranker.
     init(sources: [StationSource]) { remaining = ArraySlice(sources) }
+    /// Returns the next fallback once, never looping a failed source.
     mutating func next() -> StationSource? {
         guard let first = remaining.first else { return nil }
         remaining = remaining.dropFirst()
@@ -12,16 +15,20 @@ struct SourceQueue {
     }
 }
 
+/// Playback boundary shared by the model, the live player, and focused test doubles.
 @MainActor protocol RadioPlaying: AnyObject {
     var state: PlaybackState { get }
     var metadata: NowPlayingMetadata? { get }
     var volume: Float { get set }
     var onStateChange: ((PlaybackState) -> Void)? { get set }
     var onMetadataChange: ((NowPlayingMetadata?) -> Void)? { get set }
+    /// Replaces the current stream with a station's ordered fallback sources.
     func load(_ station: Station)
+    /// Stops live playback and releases the active player item.
     func stop()
 }
 
+/// AVFoundation-backed live radio player with stream failover and timed metadata.
 @MainActor final class RadioPlayer: RadioPlaying {
     private let player = AVPlayer()
     private var sourceQueue = SourceQueue(sources: [])
@@ -40,6 +47,7 @@ struct SourceQueue {
         set { player.volume = min(1, max(0, newValue)) }
     }
 
+    /// Observes AVPlayer state once and maps it to Airwave's lightweight playback state.
     init() {
         playerObservation = player.observe(\.timeControlStatus, options: [.initial, .new]) { [weak self] player, _ in
             Task { @MainActor in
@@ -56,12 +64,14 @@ struct SourceQueue {
 
     private var isFailed: Bool { if case .failed = state { return true }; return false }
 
+    /// Starts a station from its best source and clears stale track metadata.
     func load(_ station: Station) {
         metadata = nil
         sourceQueue = SourceQueue(sources: station.sources)
         loadNextSource()
     }
 
+    /// Stops radio instead of pausing it so the next play starts at the current live point.
     func stop() {
         state = .idle
         player.pause()
@@ -70,6 +80,7 @@ struct SourceQueue {
         metadata = nil
     }
 
+    /// Advances after a source failure until a playable fallback is exhausted.
     private func loadNextSource() {
         guard let source = sourceQueue.next() else {
             state = .failed("This station is unavailable.")
@@ -89,6 +100,7 @@ struct SourceQueue {
         player.play()
     }
 
+    /// Installs timed-metadata delivery for ICY and common artist/title fields.
     private func attachMetadata(to item: AVPlayerItem) {
         let output = AVPlayerItemMetadataOutput(identifiers: nil)
         let delegate = MetadataDelegate { [weak self] values in

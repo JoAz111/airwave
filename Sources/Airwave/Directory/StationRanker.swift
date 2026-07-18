@@ -1,6 +1,7 @@
 import Foundation
 
 enum StationRanker {
+    /// Sorts stations by usable stream quality, secure transport, directory votes, and name.
     static func rank(_ stations: [Station]) -> [Station] {
         stations
             .map { station in
@@ -29,12 +30,14 @@ enum StationRanker {
             }
     }
 
+    /// Merges directory duplicates before applying the shared playback-quality ranking.
     static func group(_ stations: [Station]) -> [Station] {
         let streamDeduplicated = merge(stations, keyedBy: streamKey)
         let nameDeduplicated = merge(streamDeduplicated, keyedBy: nameKey)
         return rank(nameDeduplicated)
     }
 
+    /// Accepts realistic radio bitrates and rejects directory garbage values.
     static func plausibleBitrate(_ value: Int?) -> Int? {
         guard let value, (16 ... 512).contains(value) else {
             return nil
@@ -42,6 +45,7 @@ enum StationRanker {
         return value
     }
 
+    /// Collapses duplicates using the supplied stable identity while retaining richer metadata.
     private static func merge(
         _ stations: [Station],
         keyedBy keyForStation: (Station) -> String?
@@ -66,6 +70,7 @@ enum StationRanker {
         return result
     }
 
+    /// Keeps the richer station record and combines all known stream fallbacks.
     private static func merged(_ lhs: Station, _ rhs: Station) -> Station {
         var preferred = qualityScore(rhs) > qualityScore(lhs) ? rhs : lhs
         preferred.sources = sortedSources(Array(Set(lhs.sources + rhs.sources)))
@@ -73,6 +78,7 @@ enum StationRanker {
         return preferred
     }
 
+    /// Scores the metadata and stream characteristics used when choosing a duplicate survivor.
     private static func qualityScore(_ station: Station) -> Int {
         let artwork = station.faviconURL == nil ? 0 : 1_000_000
         let homepage = station.homepageURL == nil ? 0 : 500_000
@@ -80,6 +86,7 @@ enum StationRanker {
         return artwork + homepage + bitrate + min(max(station.votes, 0), 100_000)
     }
 
+    /// Builds a privacy-neutral stream identity that ignores URL credentials and query noise.
     private static func streamKey(_ station: Station) -> String? {
         guard let source = station.sources.first,
               var components = URLComponents(
@@ -100,6 +107,7 @@ enum StationRanker {
         return "\(host)\(port)/\(path.lowercased())"
     }
 
+    /// Builds a country-scoped normalized name identity for mirror and frequency variants.
     private static func nameKey(_ station: Station) -> String? {
         let name = normalizedName(station.name)
         guard !name.isEmpty else { return nil }

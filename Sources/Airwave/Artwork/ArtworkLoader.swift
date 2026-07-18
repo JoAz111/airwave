@@ -3,6 +3,7 @@ import Dispatch
 import Foundation
 import ImageIO
 
+/// A decoded image together with its true in-memory bitmap cost.
 struct DecodedArtwork {
     let image: NSImage
     let cgImage: CGImage
@@ -10,10 +11,13 @@ struct DecodedArtwork {
     let pixelHeight: Int
     let bytesPerRow: Int
 
+    /// The cache cost based on decoded pixels rather than compressed download bytes.
     var cost: Int { bytesPerRow * pixelHeight }
 }
 
+/// Per-presentation pixel ceilings that keep artwork sharp without retaining huge bitmaps.
 enum ArtworkPixelBudget {
+    /// Selects a decoded size for a station logo's visible point size.
     static func station(pointSize: CGFloat?) -> Int {
         guard let pointSize else { return 320 }
         if pointSize >= 180 { return 512 }
@@ -23,16 +27,19 @@ enum ArtworkPixelBudget {
     static let countryFlag = 320
 }
 
+/// Limits simultaneous artwork requests so fast scrolling does not flood the network or decoder.
 actor ArtworkRequestLimiter {
     private let limit: Int
     private var available: Int
     private var waiters: [CheckedContinuation<Void, Never>] = []
 
+    /// Creates a limiter with at least one available request slot.
     init(limit: Int) {
         self.limit = max(1, limit)
         available = max(1, limit)
     }
 
+    /// Waits until an artwork request slot becomes available.
     func acquire() async {
         if available > 0 {
             available -= 1
@@ -43,6 +50,7 @@ actor ArtworkRequestLimiter {
         }
     }
 
+    /// Returns a request slot to the next waiter or the available pool.
     func release() {
         if waiters.isEmpty {
             available = min(limit, available + 1)
@@ -52,6 +60,7 @@ actor ArtworkRequestLimiter {
     }
 }
 
+/// Bounded, cancellation-aware remote artwork loading for station logos and country flags.
 @MainActor final class ArtworkLoader {
     private static let cacheCostLimit = 16 * 1_024 * 1_024
     private static let warningCacheCostLimit = 8 * 1_024 * 1_024
@@ -63,6 +72,7 @@ actor ArtworkRequestLimiter {
     private let memoryPressureSource: any DispatchSourceMemoryPressure
     private var shouldCacheImages = true
 
+    /// Configures bounded decoded-image caching and memory-pressure recovery.
     init() {
         cache.totalCostLimit = Self.cacheCostLimit
         cache.countLimit = 80
@@ -87,6 +97,7 @@ actor ArtworkRequestLimiter {
         pressureSource.activate()
     }
 
+    /// Downsamples data directly through Image I/O into an 8-bit sRGB bitmap.
     nonisolated static func decode(_ data: Data, maxPixelSize: Int) -> DecodedArtwork? {
         guard maxPixelSize > 0,
               let source = CGImageSourceCreateWithData(
@@ -138,6 +149,7 @@ actor ArtworkRequestLimiter {
         )
     }
 
+    /// Resolves the best available station logo, including homepage icon discovery as a fallback.
     func image(for station: Station, maxPixelSize: Int = 320) async -> NSImage? {
         let pixelSize = max(32, maxPixelSize)
         let stationKey = station.id.uuidString as NSString
@@ -178,6 +190,7 @@ actor ArtworkRequestLimiter {
         return nil
     }
 
+    /// Fetches a general-purpose image, such as a country flag, without station-logo heuristics.
     func image(for url: URL?, maxPixelSize: Int = 320) async -> NSImage? {
         await image(
             for: url,
@@ -186,6 +199,7 @@ actor ArtworkRequestLimiter {
         )
     }
 
+    /// Fetches an image only when it clears the station artwork quality checks.
     private func stationImage(for url: URL?, maxPixelSize: Int) async -> NSImage? {
         await image(
             for: url,
@@ -194,6 +208,7 @@ actor ArtworkRequestLimiter {
         )
     }
 
+    /// Fetches, validates, downscales, and cost-caches an image for one presentation size.
     private func image(
         for url: URL?,
         maxPixelSize: Int,
@@ -226,6 +241,7 @@ actor ArtworkRequestLimiter {
         }
     }
 
+    /// Produces advertised favicon candidates, resolving relative paths against a homepage.
     private func directIconURLs(for station: Station) -> [URL] {
         guard let faviconURL = station.faviconURL else { return [] }
         let resolvedURL: URL
@@ -240,6 +256,7 @@ actor ArtworkRequestLimiter {
         return secureCandidates(for: resolvedURL)
     }
 
+    /// Prefers HTTPS when an upstream directory advertises an insecure but compatible icon URL.
     private func secureCandidates(for url: URL) -> [URL] {
         guard url.scheme?.lowercased() == "http",
               var components = URLComponents(url: url, resolvingAgainstBaseURL: true) else {
@@ -250,6 +267,7 @@ actor ArtworkRequestLimiter {
         return [secureURL, url]
     }
 
+    /// Parses homepage link tags only after direct favicon candidates fail.
     private func discoverIconURLs(at homepageURL: URL) async -> [URL] {
         for url in secureCandidates(for: homepageURL) {
             guard !Task.isCancelled else { return [] }
@@ -271,6 +289,7 @@ actor ArtworkRequestLimiter {
         return []
     }
 
+    /// Runs a request through the global limiter and preserves caller cancellation.
     private func fetch(_ request: URLRequest) async throws -> (Data, URLResponse) {
         await requestLimiter.acquire()
         let result: (Data, URLResponse)
@@ -291,6 +310,7 @@ actor ArtworkRequestLimiter {
         stationIconCache.setObject(url as NSURL, forKey: key)
     }
 
+    /// Shrinks or clears caches as macOS reports warning, critical, and recovery states.
     private func handleMemoryPressure() {
         let event = memoryPressureSource.data
         if event.contains(.critical) {
@@ -308,6 +328,7 @@ actor ArtworkRequestLimiter {
         }
     }
 
+    /// Extracts standard icon link URLs from a bounded homepage document.
     nonisolated static func iconURLs(in html: String, baseURL: URL) -> [URL] {
         let tagPattern = #"<link\b[^>]*>"#
         guard let expression = try? NSRegularExpression(
@@ -330,6 +351,7 @@ actor ArtworkRequestLimiter {
         }
     }
 
+    /// Rejects tiny, extreme, or effectively blank images before they enter the station UI.
     nonisolated static func isUsableStationArtwork(_ data: Data) -> Bool {
         guard let source = CGImageSourceCreateWithData(
             data as CFData,

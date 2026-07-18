@@ -1,6 +1,7 @@
 import Foundation
 import OSLog
 
+/// The bounded set of filters Airwave sends to the Radio Browser directory.
 struct RadioBrowserQuery: Equatable, Sendable {
     enum Field: String, Sendable {
         case name
@@ -16,6 +17,7 @@ struct RadioBrowserQuery: Equatable, Sendable {
     let order: String
     let reverse: Bool
 
+    /// Creates a normalized query description before it is encoded into a request URL.
     init(
         field: Field?,
         value: String,
@@ -33,12 +35,17 @@ struct RadioBrowserQuery: Equatable, Sendable {
     }
 }
 
+/// Directory operations needed by the app, kept small so networking remains testable.
 protocol RadioBrowserServing: Sendable {
+    /// Returns healthy stations matching a bounded directory query.
     func stations(matching query: RadioBrowserQuery) async throws -> [Station]
+    /// Returns the directory's country-code counts for the country browser.
     func countryCodes() async throws -> [CountryDirectoryEntry]
+    /// Records a non-blocking directory click after a user starts a station.
     func recordClick(stationID: UUID) async
 }
 
+/// Radio Browser client with a small mirror fallback policy for resilient discovery.
 actor RadioBrowserClient: RadioBrowserServing {
     typealias Loader = @Sendable (URLRequest) async throws -> (Data, HTTPURLResponse)
 
@@ -46,6 +53,7 @@ actor RadioBrowserClient: RadioBrowserServing {
     private let load: Loader
     private let logger = Logger(subsystem: "com.joeyazizoff.Airwave", category: "Directory")
 
+    /// Creates a client with injectable mirrors and transport for deterministic tests.
     init(
         mirrors: [URL] = [
             URL(string: "https://de1.api.radio-browser.info")!,
@@ -58,6 +66,7 @@ actor RadioBrowserClient: RadioBrowserServing {
         self.load = load
     }
 
+    /// Tries up to two mirrors, returning only records suitable for playback.
     func stations(matching query: RadioBrowserQuery) async throws -> [Station] {
         var lastError: Error?
 
@@ -78,6 +87,7 @@ actor RadioBrowserClient: RadioBrowserServing {
         throw lastError ?? DirectoryError.noMirrors
     }
 
+    /// Loads country-code counts with the same bounded mirror fallback as station search.
     func countryCodes() async throws -> [CountryDirectoryEntry] {
         var lastError: Error?
 
@@ -114,6 +124,7 @@ actor RadioBrowserClient: RadioBrowserServing {
         throw lastError ?? DirectoryError.noMirrors
     }
 
+    /// Best-effort click reporting that never affects playback or browsing.
     func recordClick(stationID: UUID) async {
         guard let mirror = mirrors.first else { return }
         var request = URLRequest(url: mirror.appending(path: "/json/url/\(stationID.uuidString)"))
@@ -121,6 +132,7 @@ actor RadioBrowserClient: RadioBrowserServing {
         _ = try? await load(request)
     }
 
+    /// Encodes an app-safe, capped search request for a single directory mirror.
     private func makeRequest(mirror: URL, query: RadioBrowserQuery) throws -> URLRequest {
         var components = URLComponents(
             url: mirror.appending(path: "/json/stations/search"),
@@ -148,6 +160,7 @@ actor RadioBrowserClient: RadioBrowserServing {
 
     nonisolated private static let userAgent = "Airwave/0.1 (+https://github.com/JoAz111/airwave)"
 
+    /// Performs the production transport while preserving the injectable test boundary.
     nonisolated private static func liveLoad(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw DirectoryError.invalidResponse }

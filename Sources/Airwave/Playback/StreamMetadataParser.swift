@@ -1,6 +1,7 @@
 import AVFoundation
 import Foundation
 
+/// The small, sendable metadata representation that crosses AVFoundation's callback boundary.
 struct MetadataValue: Equatable, Sendable {
     let identifier: String?
     let commonKey: String?
@@ -8,6 +9,7 @@ struct MetadataValue: Equatable, Sendable {
 }
 
 enum StreamMetadataParser {
+    /// Converts common and ICY metadata into display-safe live track information without guessing.
     static func parse(_ values: [MetadataValue]) -> NowPlayingMetadata? {
         let cleaned = values.compactMap { value -> (MetadataValue, String)? in
             guard let text = value.stringValue?
