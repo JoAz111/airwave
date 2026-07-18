@@ -49,6 +49,23 @@ struct AirwaveUITests {
         #expect(model.libraryMode == .countries)
     }
 
+    @Test
+    func nativeLibrarySelectorUsesLargeIconSegments() throws {
+        let hostingView = host(
+            LibraryTabBar(model: makeModel()),
+            size: NSSize(width: 390, height: 44)
+        )
+        let selector = try #require(
+            descendant(of: NSSegmentedControl.self, in: hostingView)
+        )
+
+        #expect(selector.segmentCount == 4)
+        #expect(selector.controlSize == .large)
+        for index in 0 ..< selector.segmentCount {
+            #expect(selector.image(forSegment: index) != nil)
+        }
+    }
+
     private func country(code: String, name: String) -> Country {
         Country(code: code, name: name, stationCount: 10, isLocal: false)
     }
