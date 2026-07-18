@@ -12,17 +12,27 @@ struct ExpandedPlayerView: View {
         ZStack {
             backdrop
 
-            playerContent
-                .frame(maxWidth: 500)
-                .padding(.horizontal, 56)
-                .padding(.vertical, 28)
+            GeometryReader { proxy in
+                let layout = ExpandedPlayerLayout(availableSize: proxy.size)
+
+                playerContent(layout: layout)
+                    .frame(width: layout.contentWidth)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.top, layout.titlebarClearance)
+                    .padding(.horizontal, layout.horizontalInset)
+                    .padding(.bottom, layout.bottomInset)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .overlay(alignment: .topLeading) {
-            closeButton.padding(22)
+            closeButton
+                .padding(.leading, 20)
+                .padding(.top, 52)
         }
         .overlay(alignment: .topTrailing) {
-            volumeControl.padding(22)
+            volumeControl
+                .padding(.trailing, 20)
+                .padding(.top, 52)
         }
         .foregroundStyle(.black)
         .tint(.black)
@@ -53,24 +63,29 @@ struct ExpandedPlayerView: View {
         .clipped()
     }
 
-    private var playerContent: some View {
-        VStack(spacing: 20) {
-            Spacer(minLength: 44)
+    private func playerContent(layout: ExpandedPlayerLayout) -> some View {
+        VStack(spacing: layout.contentSpacing) {
+            Spacer(minLength: 0)
 
-            StationArtworkView(station: station, loader: artwork, size: 248)
+            StationArtworkView(station: station, loader: artwork, size: layout.artworkSize)
                 .shadow(color: .black.opacity(0.14), radius: 20, y: 10)
 
             HStack(spacing: 12) {
                 Color.clear.frame(width: 36, height: 36)
                 VStack(alignment: .center, spacing: 3) {
-                    Text(primaryTitle).font(.title2.bold()).lineLimit(1)
+                    Text(primaryTitle)
+                        .font(.title2.bold())
+                        .lineLimit(1)
+                        .truncationMode(.tail)
                     Text(secondaryTitle)
                         .font(.title3)
                         .foregroundStyle(.black.opacity(0.62))
                         .lineLimit(1)
+                        .truncationMode(.tail)
                 }
                 .frame(maxWidth: .infinity)
                 .multilineTextAlignment(.center)
+                .layoutPriority(-1)
                 Button { model.toggleFavorite(station) } label: {
                     Image(systemName: model.isFavorite(station) ? "star.fill" : "star")
                         .font(.system(size: 15, weight: .semibold))
@@ -82,12 +97,14 @@ struct ExpandedPlayerView: View {
                 .frame(width: 36, height: 36)
                 .help("Favorite")
             }
+            .frame(maxWidth: .infinity)
 
             HStack(spacing: 12) {
                 Capsule().fill(.black.opacity(0.16)).frame(height: 5)
                 Text("LIVE").font(.caption.bold())
                 Capsule().fill(.black.opacity(0.16)).frame(height: 5)
             }
+            .frame(maxWidth: .infinity)
 
             PlayerPrimaryButton(
                 isPlaybackActive: model.isPlaybackActive,
@@ -95,8 +112,9 @@ struct ExpandedPlayerView: View {
                 diameter: PlayerPrimaryButton.expandedDiameter,
                 action: model.togglePlayback
             )
-            Spacer(minLength: 4)
+            Spacer(minLength: 0)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var closeButton: some View {
@@ -138,4 +156,28 @@ struct ExpandedPlayerView: View {
     private var isBuffering: Bool {
         model.playbackState == .loading || model.playbackState == .waiting
     }
+}
+
+struct ExpandedPlayerLayout {
+    let availableSize: CGSize
+
+    private var isCompactHeight: Bool { availableSize.height < 590 }
+
+    var horizontalInset: CGFloat {
+        min(56, max(20, availableSize.width * 0.06))
+    }
+
+    var contentWidth: CGFloat {
+        min(500, max(0, availableSize.width - horizontalInset * 2))
+    }
+
+    var artworkSize: CGFloat {
+        let widthLimit = contentWidth * 0.62
+        let heightLimit = max(140, availableSize.height - 300)
+        return min(248, max(140, min(widthLimit, heightLimit)))
+    }
+
+    var contentSpacing: CGFloat { isCompactHeight ? 14 : 20 }
+    var titlebarClearance: CGFloat { isCompactHeight ? 66 : 78 }
+    var bottomInset: CGFloat { isCompactHeight ? 16 : 28 }
 }

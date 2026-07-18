@@ -15,6 +15,19 @@ struct AirwaveUITests {
     }
 
     @Test
+    func expandedPlayerLayoutKeepsContentInsideCompactWindows() {
+        let compact = ExpandedPlayerLayout(availableSize: CGSize(width: 560, height: 520))
+        let regular = ExpandedPlayerLayout(availableSize: CGSize(width: 700, height: 660))
+
+        #expect(compact.contentWidth == 492.8)
+        #expect(compact.artworkSize == 220)
+        #expect(compact.artworkSize < regular.artworkSize)
+        #expect(regular.contentWidth == 500)
+        #expect(regular.artworkSize == 248)
+        #expect(compact.titlebarClearance > compact.bottomInset)
+    }
+
+    @Test
     func oversizedFlagsStayInsideTheirGridCells() throws {
         let view = HStack(spacing: 12) {
             CountryFlagCardContent(

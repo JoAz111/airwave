@@ -49,6 +49,7 @@ struct MainWindowView: View {
                 }
             }
         }
+        .toolbarVisibility(isPlayerExpanded ? .hidden : .visible, for: .windowToolbar)
         .modifier(
             AirwaveSearchModifier(
                 isEnabled: !isPlayerExpanded,
