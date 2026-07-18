@@ -127,8 +127,28 @@ struct AppModelTests {
         #expect(await search.globalQueries.isEmpty)
     }
 
+    @Test
+    func ignoresAnOlderSearchThatFinishesAfterANewerQuery() async throws {
+        let oldStation = Self.station
+        let newStation = Self.otherStation
+        let search = SearchRaceFake(oldStation: oldStation, newStation: newStation)
+        let model = makeModel(search: search)
+
+        model.updateQuery("old")
+        try await waitForOldSearch(search)
+
+        model.updateQuery("new")
+        try await Task.sleep(for: .milliseconds(360))
+        #expect(model.visibleStations.map(\.id) == [newStation.id])
+
+        await search.completeOldSearch()
+        try await Task.sleep(for: .milliseconds(40))
+
+        #expect(model.visibleStations.map(\.id) == [newStation.id])
+    }
+
     private func makeModel(
-        search: SearchFake = SearchFake(),
+        search: any StationSearching = SearchFake(),
         countries values: [Country] = [],
         preferences: AirwavePreferences = AirwavePreferences()
     ) -> AppModel {
@@ -140,6 +160,14 @@ struct AppModelTests {
             locale: Locale(identifier: "en_IL"),
             localCountryCode: "IL"
         )
+    }
+
+    private func waitForOldSearch(_ search: SearchRaceFake) async throws {
+        for _ in 0 ..< 50 {
+            if await search.hasPendingOldSearch { return }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        Issue.record("The old search never started")
     }
 
     private static let station = Station(
@@ -195,6 +223,37 @@ private actor SearchFake: StationSearching {
     func stations(in countryCode: String, matching query: String) async throws -> [Station] {
         countryQueries.append((countryCode, query))
         return []
+    }
+}
+
+private actor SearchRaceFake: StationSearching {
+    private let oldStation: Station
+    private let newStation: Station
+    private var oldContinuation: CheckedContinuation<[Station], Never>?
+
+    init(oldStation: Station, newStation: Station) {
+        self.oldStation = oldStation
+        self.newStation = newStation
+    }
+
+    var hasPendingOldSearch: Bool { oldContinuation != nil }
+
+    func explore(countryCode: String?) async throws -> [Station] { [] }
+
+    func search(_ query: String) async throws -> [Station] {
+        if query == "old" {
+            return await withCheckedContinuation { continuation in
+                oldContinuation = continuation
+            }
+        }
+        return query == "new" ? [newStation] : []
+    }
+
+    func stations(in countryCode: String, matching query: String) async throws -> [Station] { [] }
+
+    func completeOldSearch() {
+        oldContinuation?.resume(returning: [oldStation])
+        oldContinuation = nil
     }
 }
 
