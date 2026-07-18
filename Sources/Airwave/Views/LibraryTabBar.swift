@@ -7,31 +7,11 @@ struct LibraryTabBar: View {
     let model: AppModel
 
     var body: some View {
-        Picker(
-            "Library",
-            selection: Binding(
-                get: { model.libraryMode },
-                set: { mode in Task { await model.activate(mode) } }
-            )
-        ) {
-            ForEach(LibraryMode.allCases) { mode in
-                Label(mode.rawValue, systemImage: symbolName(for: mode))
-                    .labelStyle(.titleAndIcon)
-                    .tag(mode)
-            }
-        }
-        .accessibilityIdentifier(Self.selectorAccessibilityIdentifier)
-        .pickerStyle(.segmented)
-        .labelsHidden()
-        .controlSize(.large)
-        .frame(width: 390)
-        .imageScale(.medium)
-        .background(
-            SegmentedControlImageConfigurator(
-                symbolNames: LibraryMode.allCases.map(symbolName(for:))
-            )
+        NativeLibrarySelector(
+            model: model,
+            symbolNames: LibraryMode.allCases.map(symbolName(for:))
         )
-        .accessibilityLabel("Library")
+        .frame(width: 390)
     }
 
     private func symbolName(for mode: LibraryMode) -> String {
@@ -43,72 +23,61 @@ struct LibraryTabBar: View {
         }
     }
 
-    private struct SegmentedControlImageConfigurator: NSViewRepresentable {
+    private struct NativeLibrarySelector: NSViewRepresentable {
+        let model: AppModel
         let symbolNames: [String]
 
-        func makeNSView(context: Context) -> ImageConfiguratorView {
-            ImageConfiguratorView(symbolNames: symbolNames)
+        func makeCoordinator() -> Coordinator {
+            Coordinator { mode in
+                Task { await model.activate(mode) }
+            }
         }
 
-        func updateNSView(_ view: ImageConfiguratorView, context: Context) {
-            view.symbolNames = symbolNames
-            view.configure()
+        func makeNSView(context: Context) -> NSSegmentedControl {
+            let modes = LibraryMode.allCases
+            let control = NSSegmentedControl(
+                labels: modes.map(\.rawValue),
+                trackingMode: .selectOne,
+                target: context.coordinator,
+                action: #selector(Coordinator.selectionChanged(_:))
+            )
+            control.controlSize = .large
+            control.setAccessibilityLabel("Library")
+            control.setAccessibilityIdentifier(LibraryTabBar.selectorAccessibilityIdentifier)
+
+            for (index, symbolName) in symbolNames.enumerated() {
+                control.setImage(
+                    NSImage(
+                        systemSymbolName: symbolName,
+                        accessibilityDescription: symbolName
+                    ),
+                    forSegment: index
+                )
+                control.setImageScaling(.scaleProportionallyDown, forSegment: index)
+            }
+            control.selectedSegment = modes.firstIndex(of: model.libraryMode) ?? 0
+            return control
         }
 
-        final class ImageConfiguratorView: NSView {
-            var symbolNames: [String]
+        func updateNSView(_ control: NSSegmentedControl, context: Context) {
+            context.coordinator.onSelectionChanged = { mode in
+                Task { await model.activate(mode) }
+            }
+            control.controlSize = .large
+            control.selectedSegment = LibraryMode.allCases.firstIndex(of: model.libraryMode) ?? 0
+        }
 
-            init(symbolNames: [String]) {
-                self.symbolNames = symbolNames
-                super.init(frame: .zero)
+        @MainActor
+        final class Coordinator: NSObject {
+            var onSelectionChanged: (LibraryMode) -> Void
+
+            init(onSelectionChanged: @escaping (LibraryMode) -> Void) {
+                self.onSelectionChanged = onSelectionChanged
             }
 
-            required init?(coder: NSCoder) {
-                fatalError("init(coder:) has not been implemented")
-            }
-
-            override func layout() {
-                super.layout()
-                configure()
-            }
-
-            func configure() {
-                guard let selector = siblingSegmentedControl() else { return }
-
-                selector.setAccessibilityIdentifier(LibraryTabBar.selectorAccessibilityIdentifier)
-                guard selector.accessibilityIdentifier() == LibraryTabBar.selectorAccessibilityIdentifier,
-                      selector.segmentCount == 4,
-                      symbolNames.count == 4 else { return }
-
-                for (index, symbolName) in symbolNames.enumerated() {
-                    selector.setImage(
-                        NSImage(
-                            systemSymbolName: symbolName,
-                            accessibilityDescription: symbolName
-                        ),
-                        forSegment: index
-                    )
-                    selector.setImageScaling(.scaleProportionallyDown, forSegment: index)
-                }
-            }
-
-            private func siblingSegmentedControl() -> NSSegmentedControl? {
-                guard let configuratorHost = superview,
-                      let pickerContainer = configuratorHost.superview else { return nil }
-
-                let selectors = pickerContainer.subviews
-                    .filter { $0 !== configuratorHost }
-                    .compactMap(segmentedControl(in:))
-                guard selectors.count == 1 else { return nil }
-                return selectors[0]
-            }
-
-            private func segmentedControl(in view: NSView) -> NSSegmentedControl? {
-                if let selector = view as? NSSegmentedControl { return selector }
-                for subview in view.subviews {
-                    if let selector = segmentedControl(in: subview) { return selector }
-                }
-                return nil
+            @objc func selectionChanged(_ sender: NSSegmentedControl) {
+                guard LibraryMode.allCases.indices.contains(sender.selectedSegment) else { return }
+                onSelectionChanged(LibraryMode.allCases[sender.selectedSegment])
             }
         }
     }

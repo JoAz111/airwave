@@ -35,11 +35,16 @@ struct AirwaveUITests {
     func nativeLibrarySelectorActivatesCountries() async throws {
         let model = makeModel()
         let hostingView = host(
-            LibraryTabBar(model: model),
-            size: NSSize(width: 330, height: 44)
+            ZStack {
+                LibraryTabBar(model: model)
+                DecoySegmentedControl()
+                    .frame(width: 1, height: 1)
+            },
+            size: NSSize(width: 390, height: 44)
         )
         let selector = try #require(
-            descendant(of: NSSegmentedControl.self, in: hostingView)
+            descendants(of: NSSegmentedControl.self, in: hostingView)
+                .first { $0.accessibilityIdentifier() == "airwave.library-selector" }
         )
 
         selector.selectedSegment = 1
@@ -52,12 +57,19 @@ struct AirwaveUITests {
     @Test
     func nativeLibrarySelectorUsesLargeIconSegments() throws {
         let hostingView = host(
-            LibraryTabBar(model: makeModel()),
+            ZStack {
+                LibraryTabBar(model: makeModel())
+                DecoySegmentedControl()
+                    .frame(width: 1, height: 1)
+            },
             size: NSSize(width: 390, height: 44)
         )
+        let selectors = descendants(of: NSSegmentedControl.self, in: hostingView)
+        #expect(selectors.count == 2)
         let selector = try #require(
-            descendant(of: NSSegmentedControl.self, in: hostingView)
+            selectors.first { $0.accessibilityIdentifier() == "airwave.library-selector" }
         )
+        let decoy = try #require(selectors.first { $0 !== selector })
 
         #expect(selector.segmentCount == 4)
         #expect(selector.controlSize == .large)
@@ -72,6 +84,9 @@ struct AirwaveUITests {
             let image = try #require(selector.image(forSegment: index))
             #expect(image.accessibilityDescription == expectedSymbol)
         }
+        #expect(decoy.segmentCount == 1)
+        #expect(decoy.accessibilityIdentifier() != "airwave.library-selector")
+        #expect(decoy.image(forSegment: 0) == nil)
     }
 
     private func country(code: String, name: String) -> Country {
@@ -107,6 +122,27 @@ struct AirwaveUITests {
             if let match = descendant(of: type, in: subview) { return match }
         }
         return nil
+    }
+
+    private func descendants<T: NSView>(of type: T.Type, in view: NSView) -> [T] {
+        var matches = (view as? T).map { [$0] } ?? []
+        for subview in view.subviews {
+            matches.append(contentsOf: descendants(of: type, in: subview))
+        }
+        return matches
+    }
+
+    private struct DecoySegmentedControl: NSViewRepresentable {
+        func makeNSView(context: Context) -> NSSegmentedControl {
+            NSSegmentedControl(
+                labels: ["Decoy"],
+                trackingMode: .selectOne,
+                target: nil,
+                action: nil
+            )
+        }
+
+        func updateNSView(_ control: NSSegmentedControl, context: Context) {}
     }
 
     private func color(
