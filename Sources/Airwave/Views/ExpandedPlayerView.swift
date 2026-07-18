@@ -57,22 +57,20 @@ struct ExpandedPlayerView: View {
         VStack(spacing: 20) {
             Spacer(minLength: 44)
 
-            StationArtworkView(station: station, loader: artwork, size: 210)
+            StationArtworkView(station: station, loader: artwork, size: 248)
                 .shadow(color: .black.opacity(0.14), radius: 20, y: 10)
 
-            HStack(alignment: .center, spacing: 14) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(primaryTitle)
-                        .font(.title2.bold())
-                        .lineLimit(1)
+            HStack(spacing: 12) {
+                Color.clear.frame(width: 36, height: 36)
+                VStack(alignment: .center, spacing: 3) {
+                    Text(primaryTitle).font(.title2.bold()).lineLimit(1)
                     Text(secondaryTitle)
                         .font(.title3)
                         .foregroundStyle(.black.opacity(0.62))
                         .lineLimit(1)
                 }
-
-                Spacer(minLength: 12)
-
+                .frame(maxWidth: .infinity)
+                .multilineTextAlignment(.center)
                 Button { model.toggleFavorite(station) } label: {
                     Image(systemName: model.isFavorite(station) ? "star.fill" : "star")
                         .font(.system(size: 15, weight: .semibold))
@@ -81,6 +79,7 @@ struct ExpandedPlayerView: View {
                 .buttonStyle(.glass)
                 .buttonBorderShape(.circle)
                 .tint(.black)
+                .frame(width: 36, height: 36)
                 .help("Favorite")
             }
 
@@ -90,7 +89,12 @@ struct ExpandedPlayerView: View {
                 Capsule().fill(.black.opacity(0.16)).frame(height: 5)
             }
 
-            playButton
+            PlayerPrimaryButton(
+                isPlaybackActive: model.isPlaybackActive,
+                isBuffering: isBuffering,
+                diameter: PlayerPrimaryButton.expandedDiameter,
+                action: model.togglePlayback
+            )
             Spacer(minLength: 4)
         }
     }
@@ -110,9 +114,9 @@ struct ExpandedPlayerView: View {
 
     private var volumeControl: some View {
         HStack(spacing: 9) {
-            Image(systemName: "speaker.fill").font(.caption)
-            PlayerVolumeSlider(model: model)
-            Image(systemName: "speaker.wave.3.fill").font(.caption)
+            Image(systemName: "speaker.fill").font(.body.weight(.medium))
+            PlayerVolumeSlider(model: model, width: 120)
+            Image(systemName: "speaker.wave.3.fill").font(.body.weight(.medium))
         }
         .padding(.horizontal, 13)
         .padding(.vertical, 9)
@@ -120,27 +124,6 @@ struct ExpandedPlayerView: View {
             .regular.tint(.white.opacity(0.24)).interactive(),
             in: .capsule
         )
-    }
-
-    private var playButton: some View {
-        Button { model.togglePlayback() } label: {
-            ZStack {
-                Image(systemName: model.isPlaybackActive ? "stop.fill" : "play.fill")
-                    .opacity(isBuffering ? 0 : 1)
-                if isBuffering {
-                    ProgressView()
-                        .controlSize(.small)
-                        .tint(.white)
-                }
-            }
-            .font(.system(size: 22, weight: .bold))
-            .foregroundStyle(.white)
-            .frame(width: 34, height: 34)
-        }
-        .buttonStyle(.glassProminent)
-        .buttonBorderShape(.circle)
-        .tint(.black)
-        .help(model.isPlaybackActive ? "Stop" : "Play live")
     }
 
     private var primaryTitle: String {

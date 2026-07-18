@@ -39,25 +39,14 @@ struct NowPlayingBar: View {
                     .lineLimit(1)
             }
             Spacer(minLength: 8)
-            Button { model.togglePlayback() } label: {
-                ZStack {
-                    Image(systemName: model.isPlaybackActive ? "stop.fill" : "play.fill")
-                        .opacity(isBuffering ? 0 : 1)
-                    if isBuffering {
-                        ProgressView().controlSize(.small)
-                    }
-                }
-                .font(.system(size: 15, weight: .bold))
-                .frame(width: 18, height: 18)
-            }
-            .buttonStyle(.glassProminent)
-            .buttonBorderShape(.circle)
-            .tint(.black)
+            PlayerPrimaryButton(
+                isPlaybackActive: model.isPlaybackActive,
+                isBuffering: isBuffering,
+                diameter: PlayerPrimaryButton.compactDiameter,
+                action: model.togglePlayback
+            )
             .disabled(model.currentStation == nil)
-            .help(model.isPlaybackActive ? "Stop" : "Play live")
-            .accessibilityLabel(model.isPlaybackActive ? "Stop" : "Play live")
 
-            Divider().frame(height: 24)
             Image(systemName: "speaker.fill")
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -65,7 +54,7 @@ struct NowPlayingBar: View {
             PlayerVolumeSlider(model: model)
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 11)
+        .padding(.vertical, 9)
         .frame(maxWidth: 590)
         .glassEffect(
             .regular.tint(.white.opacity(0.34)).interactive(),
@@ -91,6 +80,12 @@ struct NowPlayingBar: View {
 
 struct PlayerVolumeSlider: View {
     let model: AppModel
+    let width: CGFloat
+
+    init(model: AppModel, width: CGFloat = 96) {
+        self.model = model
+        self.width = width
+    }
 
     var body: some View {
         Slider(
@@ -102,7 +97,7 @@ struct PlayerVolumeSlider: View {
         )
         .controlSize(.small)
         .tint(.black)
-        .frame(width: 96)
+        .frame(width: width)
         .accessibilityLabel("Volume")
         .accessibilityIdentifier("player.volume")
     }
