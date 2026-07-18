@@ -47,6 +47,29 @@ struct StationRankerTests {
     }
 
     @Test
+    func keepsSecureRecordArtworkWhenGroupingDuplicateNames() {
+        let legacy = Station(
+            id: UUID(), name: "Capital FM London", country: "United Kingdom",
+            countryCode: "GB", tags: [], homepageURL: URL(string: "https://capital.example")!,
+            faviconURL: URL(string: "https://images.example/legacy.png")!,
+            sources: [StationSource(url: URL(string: "http://stream.example/live")!, codec: "MP3", bitrate: 128, isHLS: false)],
+            votes: 40_000
+        )
+        let current = Station(
+            id: UUID(), name: "Capital FM London", country: "United Kingdom",
+            countryCode: "GB", tags: [], homepageURL: URL(string: "https://capital.example")!,
+            faviconURL: URL(string: "https://images.example/current.png")!,
+            sources: [StationSource(url: URL(string: "https://stream.example/live")!, codec: "MP3", bitrate: 128, isHLS: false)],
+            votes: 90
+        )
+
+        let grouped = StationRanker.group([legacy, current])
+
+        #expect(grouped.count == 1)
+        #expect(grouped[0].faviconURL == URL(string: "https://images.example/current.png"))
+    }
+
+    @Test
     func groupsDifferentNamesSharingTheSameStream() {
         let english = station(name: "Capital FM", url: "https://stream.example/live?token=one")
         let localized = station(name: "Capital Radio", url: "https://stream.example/live?token=two")

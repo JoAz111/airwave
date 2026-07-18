@@ -390,7 +390,7 @@ actor ArtworkRequestLimiter {
 
     nonisolated private static func hasUsableDimensions(width: Int, height: Int) -> Bool {
         guard min(width, height) >= 96 else { return false }
-        return (0.60 ... 1.67).contains(Double(width) / Double(height))
+        return (0.60 ... 2.20).contains(Double(width) / Double(height))
     }
 
     nonisolated private static func hasSubstantialContent(in image: CGImage) -> Bool {

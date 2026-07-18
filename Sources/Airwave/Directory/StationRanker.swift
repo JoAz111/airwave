@@ -82,8 +82,12 @@ enum StationRanker {
     private static func qualityScore(_ station: Station) -> Int {
         let artwork = station.faviconURL == nil ? 0 : 1_000_000
         let homepage = station.homepageURL == nil ? 0 : 500_000
+        let secureSource = station.primarySource?.url.scheme?.lowercased() == "https"
+            ? 100_000
+            : 0
         let bitrate = (plausibleBitrate(station.primarySource?.bitrate) ?? 0) * 1_000
-        return artwork + homepage + bitrate + min(max(station.votes, 0), 100_000)
+        return artwork + homepage + secureSource + bitrate
+            + min(max(station.votes, 0), 100_000)
     }
 
     /// Builds a privacy-neutral stream identity that ignores URL credentials and query noise.

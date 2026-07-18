@@ -72,6 +72,19 @@ struct ArtworkLoaderTests {
     }
 
     @Test
+    func acceptsWideOfficialStationArtwork() throws {
+        let image = image(size: NSSize(width: 640, height: 360)) {
+            NSColor.systemBlue.setFill()
+            NSRect(x: 0, y: 0, width: 640, height: 360).fill()
+            NSColor.white.setFill()
+            NSRect(x: 132, y: 120, width: 376, height: 120).fill()
+        }
+        let data = try #require(pngData(for: image))
+
+        #expect(ArtworkLoader.isUsableStationArtwork(data))
+    }
+
+    @Test
     func downsampledArtworkFitsPixelBudgetAndReportsDecodedCost() throws {
         let source = image(size: NSSize(width: 1_024, height: 512)) {
             NSColor.systemPurple.setFill()
