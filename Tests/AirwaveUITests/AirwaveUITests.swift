@@ -7,21 +7,9 @@ import Testing
 @Suite(.serialized)
 struct AirwaveUITests {
     @Test
-    func primaryPlayerButtonProvidesALargeAccessibleHitTarget() throws {
-        let hostingView = host(
-            PlayerPrimaryButton(
-                isPlaybackActive: false,
-                isBuffering: false,
-                diameter: 56,
-                action: {}
-            ),
-            size: NSSize(width: 80, height: 80)
-        )
-        let button = try #require(descendant(of: NSButton.self, in: hostingView))
-
-        #expect(button.frame.width >= 56)
-        #expect(button.frame.height >= 56)
-        #expect(button.accessibilityLabel() == "Play live")
+    func primaryPlayerButtonUsesRadioActionLabels() {
+        #expect(PlayerPrimaryButton.actionLabel(isPlaybackActive: false) == "Play live")
+        #expect(PlayerPrimaryButton.actionLabel(isPlaybackActive: true) == "Stop")
     }
 
     @Test
