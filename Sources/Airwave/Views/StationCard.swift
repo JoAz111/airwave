@@ -8,6 +8,20 @@ struct StationCard: View {
     @State private var isHovering = false
 
     var body: some View {
+        ZStack(alignment: .topTrailing) {
+            Button { model.select(station) } label: {
+                cardContent
+            }
+            .buttonStyle(.plain)
+            .accessibilityValue(isActive ? "Playing" : "")
+
+            favoriteButton
+        }
+        .onHover { isHovering = $0 }
+        .animation(.snappy(duration: 0.16), value: isHovering)
+    }
+
+    private var cardContent: some View {
         VStack(alignment: .leading, spacing: 7) {
             StationArtworkView(station: station, loader: artwork, size: nil)
                 .overlay {
@@ -24,19 +38,7 @@ struct StationCard: View {
                             .transition(.scale.combined(with: .opacity))
                     }
                 }
-                .overlay(alignment: .topTrailing) {
-                    Button { model.toggleFavorite(station) } label: {
-                        Image(systemName: model.isFavorite(station) ? "star.fill" : "star")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(model.isFavorite(station) ? .yellow : .white)
-                            .frame(width: 28, height: 28)
-                            .background(.black.opacity(0.48), in: .circle)
-                    }
-                    .buttonStyle(.plain)
-                    .padding(8)
-                    .opacity(isHovering || model.isFavorite(station) ? 1 : 0)
-                    .help("Favorite")
-                }
+                .scaleEffect(isHovering ? 1.012 : 1)
 
             Text(station.name)
                 .font(.headline)
@@ -46,13 +48,22 @@ struct StationCard: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
         }
-        .contentShape(.rect)
-        .onTapGesture { model.select(station) }
-        .onHover { isHovering = $0 }
-        .animation(.smooth(duration: 0.16), value: isHovering)
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isButton)
-        .accessibilityValue(isActive ? "Playing" : "")
+        .contentShape(.rect(cornerRadius: 14))
+    }
+
+    private var favoriteButton: some View {
+        Button { model.toggleFavorite(station) } label: {
+            Image(systemName: model.isFavorite(station) ? "star.fill" : "star")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(model.isFavorite(station) ? .yellow : .white)
+                .frame(width: 28, height: 28)
+                .background(.black.opacity(0.48), in: .circle)
+        }
+        .buttonStyle(.plain)
+        .padding(8)
+        .opacity(isHovering || model.isFavorite(station) ? 1 : 0)
+        .help(model.isFavorite(station) ? "Remove favorite" : "Favorite")
+        .accessibilityLabel(model.isFavorite(station) ? "Remove favorite" : "Favorite")
     }
 
     private var isActive: Bool {

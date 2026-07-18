@@ -5,7 +5,7 @@ struct CountryBrowserView: View {
     let artwork: ArtworkLoader
 
     private let columns = [
-        GridItem(.adaptive(minimum: 142, maximum: 190), spacing: 18)
+        GridItem(.adaptive(minimum: 152, maximum: 208), spacing: 18)
     ]
 
     var body: some View {

@@ -29,6 +29,7 @@ struct ExpandedPlayerView: View {
         .task(id: station.id) {
             backgroundImage = await artwork.image(for: station)
         }
+        .onDisappear { backgroundImage = nil }
         .onExitCommand(perform: onDismiss)
         .accessibilityLabel("Expanded player")
     }

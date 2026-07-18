@@ -58,6 +58,7 @@ struct MainWindowView: View {
         )
         .tint(AirwaveStyle.accent)
         .preferredColorScheme(.light)
+        .animation(.snappy(duration: 0.24), value: model.libraryMode)
         .task { await model.start() }
     }
 

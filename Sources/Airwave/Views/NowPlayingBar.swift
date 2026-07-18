@@ -66,7 +66,7 @@ struct NowPlayingBar: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 11)
-        .frame(maxWidth: 640)
+        .frame(maxWidth: 590)
         .glassEffect(
             .regular.tint(.white.opacity(0.34)).interactive(),
             in: .rect(cornerRadius: 26)
@@ -101,6 +101,7 @@ struct PlayerVolumeSlider: View {
             in: 0 ... 1
         )
         .controlSize(.small)
+        .tint(.black)
         .frame(width: 96)
         .accessibilityLabel("Volume")
         .accessibilityIdentifier("player.volume")

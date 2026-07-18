@@ -36,10 +36,17 @@ struct StationArtworkView: View {
                 .scaledToFit()
                 .padding(artworkPadding)
         } else {
-            Image(systemName: "antenna.radiowaves.left.and.right")
-                .font(size == nil ? .system(size: 34) : .title3)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            ZStack {
+                LinearGradient(
+                    colors: [.black.opacity(0.08), .black.opacity(0.02)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                Image(systemName: "antenna.radiowaves.left.and.right")
+                    .font(size == nil ? .system(size: 30, weight: .medium) : .title3)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
