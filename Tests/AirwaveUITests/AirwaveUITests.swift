@@ -61,8 +61,16 @@ struct AirwaveUITests {
 
         #expect(selector.segmentCount == 4)
         #expect(selector.controlSize == .large)
-        for index in 0 ..< selector.segmentCount {
-            #expect(selector.image(forSegment: index) != nil)
+        #expect(selector.accessibilityIdentifier() == "airwave.library-selector")
+        let expectedSymbols = [
+            "rectangle.grid.2x2",
+            "globe.americas.fill",
+            "star",
+            "clock"
+        ]
+        for (index, expectedSymbol) in expectedSymbols.enumerated() {
+            let image = try #require(selector.image(forSegment: index))
+            #expect(image.accessibilityDescription == expectedSymbol)
         }
     }
 

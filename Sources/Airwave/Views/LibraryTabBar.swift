@@ -2,6 +2,8 @@ import AppKit
 import SwiftUI
 
 struct LibraryTabBar: View {
+    private static let selectorAccessibilityIdentifier = "airwave.library-selector"
+
     let model: AppModel
 
     var body: some View {
@@ -18,6 +20,7 @@ struct LibraryTabBar: View {
                     .tag(mode)
             }
         }
+        .accessibilityIdentifier(Self.selectorAccessibilityIdentifier)
         .pickerStyle(.segmented)
         .labelsHidden()
         .controlSize(.large)
@@ -70,24 +73,34 @@ struct LibraryTabBar: View {
             }
 
             func configure() {
-                guard let selector = containingSegmentedControl(for: self) else { return }
+                guard let selector = siblingSegmentedControl() else { return }
+
+                selector.setAccessibilityIdentifier(LibraryTabBar.selectorAccessibilityIdentifier)
+                guard selector.accessibilityIdentifier() == LibraryTabBar.selectorAccessibilityIdentifier,
+                      selector.segmentCount == 4,
+                      symbolNames.count == 4 else { return }
 
                 for (index, symbolName) in symbolNames.enumerated() {
                     selector.setImage(
-                        NSImage(systemSymbolName: symbolName, accessibilityDescription: nil),
+                        NSImage(
+                            systemSymbolName: symbolName,
+                            accessibilityDescription: symbolName
+                        ),
                         forSegment: index
                     )
                     selector.setImageScaling(.scaleProportionallyDown, forSegment: index)
                 }
             }
 
-            private func containingSegmentedControl(for view: NSView) -> NSSegmentedControl? {
-                var ancestor: NSView? = view
-                while let current = ancestor {
-                    if let selector = segmentedControl(in: current) { return selector }
-                    ancestor = current.superview
-                }
-                return nil
+            private func siblingSegmentedControl() -> NSSegmentedControl? {
+                guard let configuratorHost = superview,
+                      let pickerContainer = configuratorHost.superview else { return nil }
+
+                let selectors = pickerContainer.subviews
+                    .filter { $0 !== configuratorHost }
+                    .compactMap(segmentedControl(in:))
+                guard selectors.count == 1 else { return nil }
+                return selectors[0]
             }
 
             private func segmentedControl(in view: NSView) -> NSSegmentedControl? {
