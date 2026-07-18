@@ -42,7 +42,7 @@ struct NowPlayingBar: View {
             PlayerPrimaryButton(
                 isPlaybackActive: model.isPlaybackActive,
                 isBuffering: isBuffering,
-                diameter: 40,
+                diameter: PlayerPrimaryButton.compactDiameter,
                 action: model.togglePlayback
             )
             .disabled(model.currentStation == nil)

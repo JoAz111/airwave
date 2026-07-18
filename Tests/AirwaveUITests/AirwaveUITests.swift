@@ -7,7 +7,9 @@ import Testing
 @Suite(.serialized)
 struct AirwaveUITests {
     @Test
-    func primaryPlayerButtonUsesRadioActionLabels() {
+    func primaryPlayerButtonUsesSharedRadioMetricsAndLabels() {
+        #expect(PlayerPrimaryButton.compactDiameter == 40)
+        #expect(PlayerPrimaryButton.expandedDiameter == 56)
         #expect(PlayerPrimaryButton.actionLabel(isPlaybackActive: false) == "Play live")
         #expect(PlayerPrimaryButton.actionLabel(isPlaybackActive: true) == "Stop")
     }

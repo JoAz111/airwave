@@ -60,18 +60,17 @@ struct ExpandedPlayerView: View {
             StationArtworkView(station: station, loader: artwork, size: 248)
                 .shadow(color: .black.opacity(0.14), radius: 20, y: 10)
 
-            VStack(alignment: .center, spacing: 3) {
-                Text(primaryTitle)
-                    .font(.title2.bold())
-                    .lineLimit(1)
-                Text(secondaryTitle)
-                    .font(.title3)
-                    .foregroundStyle(.black.opacity(0.62))
-                    .lineLimit(1)
-            }
-            .frame(maxWidth: .infinity)
-            .multilineTextAlignment(.center)
-            .overlay(alignment: .trailing) {
+            HStack(spacing: 12) {
+                Color.clear.frame(width: 36, height: 36)
+                VStack(alignment: .center, spacing: 3) {
+                    Text(primaryTitle).font(.title2.bold()).lineLimit(1)
+                    Text(secondaryTitle)
+                        .font(.title3)
+                        .foregroundStyle(.black.opacity(0.62))
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity)
+                .multilineTextAlignment(.center)
                 Button { model.toggleFavorite(station) } label: {
                     Image(systemName: model.isFavorite(station) ? "star.fill" : "star")
                         .font(.system(size: 15, weight: .semibold))
@@ -80,6 +79,7 @@ struct ExpandedPlayerView: View {
                 .buttonStyle(.glass)
                 .buttonBorderShape(.circle)
                 .tint(.black)
+                .frame(width: 36, height: 36)
                 .help("Favorite")
             }
 
@@ -92,7 +92,7 @@ struct ExpandedPlayerView: View {
             PlayerPrimaryButton(
                 isPlaybackActive: model.isPlaybackActive,
                 isBuffering: isBuffering,
-                diameter: 56,
+                diameter: PlayerPrimaryButton.expandedDiameter,
                 action: model.togglePlayback
             )
             Spacer(minLength: 4)

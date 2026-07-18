@@ -1,6 +1,9 @@
 import SwiftUI
 
 struct PlayerPrimaryButton: View {
+    static let compactDiameter: CGFloat = 40
+    static let expandedDiameter: CGFloat = 56
+
     let isPlaybackActive: Bool
     let isBuffering: Bool
     let diameter: CGFloat
